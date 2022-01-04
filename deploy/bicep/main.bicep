@@ -1,109 +1,135 @@
-targetScope = 'subscription'
-
 // Naming convention requirements
 param prefix string
-var name = '${prefix}-aksredddog'
 
-param location string = deployment().location
-param uniqueSeed string = '${subscription().subscriptionId}-${deployment().name}'
-param resourceGroupName string = '${prefix}-${uniqueString(uniqueSeed)}'
-param serviceBusNamespaceName string = resourceGroupName
-param redisName string = resourceGroupName
-param cosmosAccountName string = resourceGroupName
-param cosmosDatabaseName string = 'reddog'
-param cosmosCollectionName string = 'loyalty'
-param storageAccountName string = replace(resourceGroupName, '-', '')
-param blobContainerName string = 'receipts'
-param sqlServerName string = resourceGroupName
-param sqlDatabaseName string = 'reddog'
-param sqlAdminLogin string = 'reddog'
-param sqlAdminLoginPassword string = 'w@lkingth3d0g'
-param adminUsername string = 'azureuser'
-param adminPublicKey string
-
-module resourceGroupModule 'modules/resource-group.bicep' = {
-  name: '${deployment().name}--resourceGroup'
-  scope: subscription()
-  params: {
-    location: location
-    resourceGroupName: resourceGroupName
+// Network Settings
+param vnetPrefix string = '10.0.0.0/16'
+param aksSubnetInfo object = {
+  name: 'AksSubnet'
+  properties: { 
+    addressPrefix: '10.0.4.0/22'
+    privateEndpointNetworkPolicies: 'Disabled'
+  }
+}
+param jumpboxSubnetInfo object = {
+  name: 'JumpboxSubnet'
+  properties: {
+    addressPrefix: '10.0.255.240/28'
   }
 }
 
-module aks 'modules/aks.bicep' = {
-  name: 'aks-deployment'
-  scope: resourceGroup(resourceGroupName)
-  params: {
-    clusterName: name
-    location: location
-    dnsPrefix: name
-    linuxAdminUsername: adminUsername
-    sshRSAPublicKey: adminPublicKey
-  }  
+// Linux Config
+param adminUsername string = 'azureuser'
+param adminPublicKey string
+
+// Additional Params
+param serviceBusNamespaceName string = resourceGroup().name
+param redisName string = resourceGroup().name
+param cosmosAccountName string = resourceGroup().name
+param cosmosDatabaseName string = 'reddog'
+param cosmosCollectionName string = 'loyalty'
+param storageAccountName string = replace(resourceGroup().name, '-', '')
+param blobContainerName string = 'receipts'
+param sqlServerName string = resourceGroup().name
+param sqlDatabaseName string = 'reddog'
+param sqlAdminLogin string = 'reddog'
+param sqlAdminLoginPassword string = 'w@lkingth3d0g'
+param currentUserId string
+
+var name = '${prefix}-reddog'
+
+//
+// Top Level Resources
+//
+
+resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
+  name: '${prefix}-hub-vnet'
+  location: resourceGroup().location
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        vnetPrefix
+      ]
+    }
+    subnets: [
+      aksSubnetInfo
+      jumpboxSubnetInfo
+    ]
+  } 
 }
+
+module keyvault 'modules/keyvault.bicep' = {
+  name: 'keyvault'
+  params: {
+    prefix: name
+    accessPolicies: [
+      {
+        objectId: currentUserId
+        tenantId: subscription().tenantId
+        permissions: {
+          certificates: [
+            'get'
+            'create'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+
+// module aks 'modules/aks.bicep' = {
+//   name: 'aks-deployment'
+//   params: {
+//     name: format('{0}-aks',name)
+//     adminUsername: adminUsername
+//     adminPublicKey: adminPublicKey
+//     subnetId: '${vnet.id}/subnets/${aksSubnetInfo.name}'
+//   }
+  
+// }
 
 // module serviceBusModule 'modules/servicebus.bicep' = {
 //   name: '${deployment().name}--servicebus'
-//   scope: resourceGroup(resourceGroupName)
-//   dependsOn: [
-//     resourceGroupModule
-//   ]
 //   params: {
 //     serviceBusNamespaceName: serviceBusNamespaceName
-//     location: location
+//     location: resourceGroup().location
 //   }
 // }
 
 // module redisModule 'modules/redis.bicep' = {
 //   name: '${deployment().name}--redis'
-//   scope: resourceGroup(resourceGroupName)
-//   dependsOn: [
-//     resourceGroupModule
-//   ]
 //   params: {
 //     redisName: redisName
-//     location: location
+//     location: resourceGroup().location
 //   }
 // }
 
 // module cosmosModule 'modules/cosmos.bicep' = {
 //   name: '${deployment().name}--cosmos'
-//   scope: resourceGroup(resourceGroupName)
-//   dependsOn: [
-//     resourceGroupModule
-//   ]
 //   params: {
 //     cosmosAccountName: cosmosAccountName
 //     cosmosDatabaseName: cosmosDatabaseName
 //     cosmosCollectionName: cosmosCollectionName
-//     location: location
+//     location: resourceGroup().location
 //   }
 // }
 
-// module storageModule 'modules/storage.bicep' = {
-//   name: '${deployment().name}--storage'
-//   scope: resourceGroup(resourceGroupName)
-//   dependsOn: [
-//     resourceGroupModule
-//   ]
-//   params: {
-//     storageAccountName: storageAccountName
-//     blobContainerName: blobContainerName
-//     location: location
-//   }
-// }
+module storageModule 'modules/storage.bicep' = {
+  name: '${deployment().name}--storage'
+  params: {
+    storageAccountName: storageAccountName
+    blobContainerName: blobContainerName
+    location: resourceGroup().location
+  }
+}
 
 // module sqlServerModule 'modules/sqlserver.bicep' = {
 //   name: '${deployment().name}--sqlserver'
-//   scope: resourceGroup(resourceGroupName)
-//   dependsOn: [
-//     resourceGroupModule
-//   ]
 //   params: {
 //     sqlServerName: sqlServerName
 //     sqlDatabaseName: sqlDatabaseName
 //     sqlAdminLogin: sqlAdminLogin
 //     sqlAdminLoginPassword: sqlAdminLoginPassword
-//     location: location
+//     location: resourceGroup().location
 //   }
 // }
