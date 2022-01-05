@@ -1,5 +1,6 @@
-export LOCATION="eastus"
-export PREFIX="briar"
+mkdir -p outputs
+export RG_NAME=$1
+export LOCATION=$2
 
 echo '****************************************************'
 echo "Starting Red Dog on AKS deployment"
@@ -19,7 +20,6 @@ if [[ ${AZURE_LOGIN} -ne 0 ]]; then
     export AZURE_LOGIN
 fi
 
-export RG_NAME=$PREFIX-reddog-aks-$RANDOM
 echo "RG Name: " $RG_NAME
 
 # create RG
@@ -57,9 +57,8 @@ echo "Base infra deployed. Starting config/app deployment"
 echo '****************************************************'    
 
 # Save deployment outputs
-mkdir -p outputs
 echo "Bicep deployment outputs:"
-az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.outputs | tee "./outputs/$RG_NAME-bicep-outputs.json"
+az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.outputs > "./outputs/$RG_NAME-bicep-outputs.json"
 
 # https://github.com/Azure/reddog-hybrid-arc/blob/main/infra/common/utils.subr
 
@@ -78,13 +77,12 @@ az ad sp create-for-rbac \
 ## Get SP APP ID
 echo "Getting SP_APPID ..."
 SP_INFO=$(az ad sp list -o json --display-name "http://sp-$RG_NAME.microsoft.com")
-SP_APPID=$(echo $SP_INFO | jq -r .[].appId)       
+SP_APPID=$(echo $SP_INFO | jq -r .[].appId)  
+echo "AKV SP_APPID: $SP_APPID"      
 
 ## Get SP Object ID
 echo "Getting SP_OBJECTID ..."
 SP_OBJECTID=$(echo $SP_INFO | jq -r .[].objectId)
-
-echo "AKV SP_APPID: $SP_APPID" 
 echo "AKV SP_OBJECTID: $SP_OBJECTID"
 
 # Assign SP to KV with GET permissions
@@ -109,7 +107,7 @@ az keyvault secret download \
     --vault-name $KV_NAME \
     --name $RG_NAME-cert \
     --encoding base64 \
-    --file ./kv-$RG_NAME-cert.pfx  
+    --file ./kv-$RG_NAME-cert.pfx
 
 # Write keys to KV
 echo '****************************************************'
@@ -120,7 +118,9 @@ echo '****************************************************'
     export STORAGE_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountName.value)
     echo "Storage Account: $STORAGE_NAME"
     export STORAGE_KEY=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountKey.value)
-    echo "Storage Key: $STORAGE_KEY"
+    
+    az keyvault secret set --vault-name $KV_NAME --name storage-key --value $STORAGE_KEY
+    echo "KeyVault secret created: storage-key"
 
     # cosmosdb
     export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -128,13 +128,16 @@ echo '****************************************************'
     export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
     echo "Cosmos Account: " $COSMOS_ACCOUNT
     export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
-    echo "CosmosDB Key: " $COSMOS_PRIMARY_RW_KEY
+    
+    az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
+    echo "KeyVault secret created: cosmos-primary-rw-key"
 
     # service bus
     export SB_NAME=$(jq -r .serviceBusName.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Service Bus Name: " $SB_NAME
     export SB_CONNECT_STRING=$(jq -r .serviceBusConnectString.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Service Bus Connect String: " $SB_CONNECT_STRING
+
+    az keyvault secret set --vault-name $KV_NAME --name sb-root-connectionstring --value $SB_CONNECT_STRING
+    echo "KeyVault secret created: sb-root-connectionstring"
 
     # Azure SQL
     export SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -142,15 +145,20 @@ echo '****************************************************'
     export SQL_ADMIN_PASSWD=$(jq -r .sqlPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
     
     export REDDOG_SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Database=reddoghub;User ID=${SQL_ADMIN_USER_NAME};Password=${SQL_ADMIN_PASSWD};Encrypt=true;Connection Timeout=30;"
-    echo "SQL Server Connect String: " $REDDOG_SQL_CONNECTION_STRING
+    
+    az keyvault secret set --vault-name $KV_NAME --name reddog-sql --value "${REDDOG_SQL_CONNECTION_STRING}"
+    echo "KeyVault secret created: reddog-sql"
 
     # Redis
     export REDIS_HOST=$(jq -r .redisHost.value ./outputs/$RG_NAME-bicep-outputs.json)
     export REDIS_PORT=$(jq -r .redisSslPort.value ./outputs/$RG_NAME-bicep-outputs.json)
     export REDIS_FQDN="${REDIS_HOST}:${REDIS_PORT}"
-    echo "Redis FQDN: " $REDIS_FQDN
     export REDIS_PASSWORD=$(jq -r .redisPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Redis password: " $REDIS_PASSWORD
+
+    az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
+    echo "KeyVault secret created: redis-server"
+    az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWORD
+    echo "KeyVault secret created: redis-password"
 
 # Connect to AKS and create namespace, secrets 
 echo '****************************************************'
@@ -159,3 +167,7 @@ echo '****************************************************'
 AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
 echo "AKS Cluster Name: " $AKS_NAME
 az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
+
+echo 'Create reddog namespace'
+kubectl create ns reddog
+kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
