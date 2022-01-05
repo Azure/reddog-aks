@@ -3,8 +3,6 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-ouputs/
-
 # User-specific files
 *.rsuser
 *.suo
@@ -350,3 +348,14 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# Red Dog
+.DS_Store
+
+id_rsa
+id_rsa.pub
+
+ssh_keys/
+outputs/
+
+*.pfx

@@ -133,3 +133,12 @@ module storageModule 'modules/storage.bicep' = {
 //     location: resourceGroup().location
 //   }
 // }
+
+// Outputs
+output keyvaultName string = keyvault.outputs.name
+// output aksName string = aks.outputs.name
+// output sqlServerName string = sqlServer.outputs.name
+// output cosmosDbName string = cosmos.outputs.name
+// output serviceBusName string = servicebus.outputs.name
+output storageAccountName string = storageModule.outputs.storageAccountName
+output storageAccountKey string = storageModule.outputs.accessKey
