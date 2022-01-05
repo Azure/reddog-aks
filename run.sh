@@ -44,6 +44,7 @@ echo '****************************************************'
 az deployment group create \
     --name aks-reddog \
     --mode Incremental \
+    --only-show-errors \
     --resource-group $RG_NAME \
     --template-file ./deploy/bicep/main.bicep \
     --parameters prefix=$PREFIX \
@@ -68,6 +69,7 @@ export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName
 echo "Key Vault: $KV_NAME"
 az ad sp create-for-rbac \
         --name "http://sp-$RG_NAME.microsoft.com" \
+        --only-show-errors \
         --create-cert \
         --cert $RG_NAME-cert \
         --keyvault $KV_NAME \
@@ -128,11 +130,32 @@ echo '****************************************************'
     export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
     echo "CosmosDB Key: " $COSMOS_PRIMARY_RW_KEY
 
-exit 0
+    # service bus
+    export SB_NAME=$(jq -r .serviceBusName.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Service Bus Name: " $SB_NAME
+    export SB_CONNECT_STRING=$(jq -r .serviceBusConnectString.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Service Bus Connect String: " $SB_CONNECT_STRING
+
+    # Azure SQL
+    export SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
+    export SQL_ADMIN_USER_NAME=$(jq -r .sqlAdmin.value ./outputs/$RG_NAME-bicep-outputs.json)
+    export SQL_ADMIN_PASSWD=$(jq -r .sqlPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
+    
+    export REDDOG_SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Database=reddoghub;User ID=${SQL_ADMIN_USER_NAME};Password=${SQL_ADMIN_PASSWD};Encrypt=true;Connection Timeout=30;"
+    echo "SQL Server Connect String: " $REDDOG_SQL_CONNECTION_STRING
+
+    # Redis
+    export REDIS_HOST=$(jq -r .redisHost.value ./outputs/$RG_NAME-bicep-outputs.json)
+    export REDIS_PORT=$(jq -r .redisSslPort.value ./outputs/$RG_NAME-bicep-outputs.json)
+    export REDIS_FQDN="${REDIS_HOST}:${REDIS_PORT}"
+    echo "Redis FQDN: " $REDIS_FQDN
+    export REDIS_PASSWORD=$(jq -r .redisPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Redis password: " $REDIS_PASSWORD
+
 # Connect to AKS and create namespace, secrets 
 echo '****************************************************'
 echo "Connect to AKS and create namespace, secrets"
 echo '****************************************************'
 AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
 echo "AKS Cluster Name: " $AKS_NAME
-az aks get-credentials -n $AKS_NAME -g $RG_NAME
+az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing

@@ -37,4 +37,6 @@ resource database 'Microsoft.Sql/servers/databases@2021-05-01-preview' = {
   }
 }
 
-output sqlConnectionString string = 'Server=tcp:${sqlServerName}${environment().suffixes.sqlServerHostname},1433;Initial Catalog=${sqlDatabaseName};Persist Security Info=False;User ID=${sqlAdminLogin};Password=${sqlAdminLoginPassword};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;'
+output sqlServerName string = sqlServerName
+output sqlAdmin string = sqlAdminLogin
+output sqlPassword string = sqlAdminLoginPassword
