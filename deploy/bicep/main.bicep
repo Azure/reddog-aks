@@ -104,15 +104,15 @@ module keyvault 'modules/keyvault.bicep' = {
 //   }
 // }
 
-// module cosmosModule 'modules/cosmos.bicep' = {
-//   name: '${deployment().name}--cosmos'
-//   params: {
-//     cosmosAccountName: cosmosAccountName
-//     cosmosDatabaseName: cosmosDatabaseName
-//     cosmosCollectionName: cosmosCollectionName
-//     location: resourceGroup().location
-//   }
-// }
+module cosmos 'modules/cosmos.bicep' = {
+  name: '${deployment().name}--cosmos'
+  params: {
+    cosmosAccountName: cosmosAccountName
+    cosmosDatabaseName: cosmosDatabaseName
+    cosmosCollectionName: cosmosCollectionName
+    location: resourceGroup().location
+  }
+}
 
 module storageModule 'modules/storage.bicep' = {
   name: '${deployment().name}--storage'
@@ -138,7 +138,8 @@ module storageModule 'modules/storage.bicep' = {
 output keyvaultName string = keyvault.outputs.name
 // output aksName string = aks.outputs.name
 // output sqlServerName string = sqlServer.outputs.name
-// output cosmosDbName string = cosmos.outputs.name
+output cosmosUri string = cosmos.outputs.cosmosUri
+output cosmosAccountName string = cosmos.outputs.cosmosAccountName
 // output serviceBusName string = servicebus.outputs.name
 output storageAccountName string = storageModule.outputs.storageAccountName
 output storageAccountKey string = storageModule.outputs.accessKey

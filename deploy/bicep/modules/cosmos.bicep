@@ -47,4 +47,4 @@ resource cosmosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
 }
 
 output cosmosUri string = 'https://${cosmosAccountName}.documents.azure.com:443/'
-output cosmosPrimaryKey string = listkeys(cosmosAccount.id, cosmosAccount.apiVersion).primaryMasterKey
+output cosmosAccountName string = cosmosAccountName

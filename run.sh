@@ -1,11 +1,25 @@
 export LOCATION="eastus"
-export PREFIX="briar23"
+export PREFIX="briar"
 
 echo '****************************************************'
 echo "Starting Red Dog on AKS deployment"
 echo '****************************************************'
 
-export RG_NAME=$PREFIX-reddog-aks-$LOCATION
+# Check for Azure login
+echo "Checking to ensure logged into Azure CLI"
+AZURE_LOGIN=0 
+# run a command against Azure to check if we are logged in already.
+az group list -o table
+# save the return code from above. Anything different than 0 means we need to login
+AZURE_LOGIN=$?
+
+if [[ ${AZURE_LOGIN} -ne 0 ]]; then
+# not logged in. Initiate login process
+    az login --use-device-code
+    export AZURE_LOGIN
+fi
+
+export RG_NAME=$PREFIX-reddog-aks-$RANDOM
 echo "RG Name: " $RG_NAME
 
 # create RG
@@ -23,7 +37,10 @@ export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
 echo "Current user: " $CURRENT_USER_ID
 
 # Bicep deployment
+echo '****************************************************'
 echo "Starting Bicep deployment of resources"
+echo '****************************************************'
+
 az deployment group create \
     --name aks-reddog \
     --mode Incremental \
@@ -40,11 +57,12 @@ echo '****************************************************'
 
 # Save deployment outputs
 mkdir -p outputs
+echo "Bicep deployment outputs:"
 az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.outputs | tee "./outputs/$RG_NAME-bicep-outputs.json"
 
 # https://github.com/Azure/reddog-hybrid-arc/blob/main/infra/common/utils.subr
 
-# Initialize KV 
+# Initialize KV  
 echo "Create SP for KV and setup permissions"
 export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName.value)
 echo "Key Vault: $KV_NAME"
@@ -53,7 +71,6 @@ az ad sp create-for-rbac \
         --create-cert \
         --cert $RG_NAME-cert \
         --keyvault $KV_NAME \
-        --skip-assignment \
         --years 1
 
 ## Get SP APP ID
@@ -73,20 +90,49 @@ az keyvault set-policy \
     --name $KV_NAME \
     --object-id $SP_OBJECTID \
     --secret-permissions get  \
-    --certificate-permissions get        
+    --certificate-permissions get
 
+# Assign permissions to the current user
+UPN=$(az ad signed-in-user show  -o json | jq -r '.userPrincipalName')
+echo "User UPN: " $UPN
+
+az keyvault set-policy \
+    --name $KV_NAME \
+    --secret-permissions get list set \
+    --certificate-permissions create get list \
+    --upn $UPN  
+
+# Download .pfx for Dapr secret (later)
 az keyvault secret download \
     --vault-name $KV_NAME \
     --name $RG_NAME-cert \
     --encoding base64 \
-    --file $SSH_KEY_PATH/kv-$RG_NAME-cert.pfx  
+    --file ./kv-$RG_NAME-cert.pfx  
 
 # Write keys to KV
 echo '****************************************************'
-echo "Writing all keys to KeyVault"
+echo "Writing all secrets to KeyVault"
 echo '****************************************************'
 
-export STORAGE_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountName.value)
-export STORAGE_KEY=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountKey.value)
-echo "Storage Account: $STORAGE_NAME"
-echo "Storage Key: $STORAGE_KEY"
+    # storage account
+    export STORAGE_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountName.value)
+    echo "Storage Account: $STORAGE_NAME"
+    export STORAGE_KEY=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountKey.value)
+    echo "Storage Key: $STORAGE_KEY"
+
+    # cosmosdb
+    export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Cosmos URI: " $COSMOS_URI
+    export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Cosmos Account: " $COSMOS_ACCOUNT
+    export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
+    echo "CosmosDB Key: " $COSMOS_PRIMARY_RW_KEY
+
+exit 0
+# Connect to AKS and create namespace, secrets 
+echo '****************************************************'
+echo "Connect to AKS and create namespace, secrets"
+echo '****************************************************'
+AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
+echo "AKS Cluster Name: " $AKS_NAME
+az aks get-credentials -n $AKS_NAME -g $RG_NAME
