@@ -6,6 +6,8 @@ echo '****************************************************'
 echo "Starting Red Dog on AKS deployment"
 echo '****************************************************'
 
+# https://github.com/Azure/reddog-hybrid-arc/blob/main/infra/common/utils.subr
+
 # Check for Azure login
 echo "Checking to ensure logged into Azure CLI"
 AZURE_LOGIN=0 
@@ -59,8 +61,6 @@ echo '****************************************************'
 # Save deployment outputs
 echo "Bicep deployment outputs:"
 az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.outputs > "./outputs/$RG_NAME-bicep-outputs.json"
-
-# https://github.com/Azure/reddog-hybrid-arc/blob/main/infra/common/utils.subr
 
 # Initialize KV  
 echo "Create SP for KV and setup permissions"
@@ -171,3 +171,41 @@ az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
 echo 'Create reddog namespace'
 kubectl create ns reddog
 kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
+
+# Azure SQL server must set firewall to allow azure services
+export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
+echo "Allow Azure Services to access Azure SQL (Firewall)"
+az sql server firewall-rule create \
+    --resource-group $RG_NAME \
+    --server $AZURE_SQL_SERVER \
+    --name AllowAzureServices \
+    --start-ip-address 0.0.0.0 \
+    --end-ip-address 0.0.0.0
+
+# Zipkin
+echo "Installing Zipkin for Dapr"
+kubectl create ns zipkin
+kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
+kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411    
+
+# Configure Arc and GitOps - Dependencies and Red Dog
+echo '****************************************************'
+echo "Configure Arc and GitOps - Dependencies and Red Dog"
+echo '****************************************************'
+export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
+
+az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
+echo "AKS cluster Arc enabled"
+
+echo "Configuring GitOps dependencies deployment"
+az k8s-configuration create --name $RG_NAME-dep \
+        --cluster-name $AKS_NAME \
+        --resource-group $RG_NAME \
+        --scope cluster \
+        --cluster-type connectedClusters \
+        --operator-instance-name flux \
+        --operator-namespace flux \
+        --operator-params="--git-readonly --git-path=manifests/dependencies --git-branch=main --manifest-generation=true" \
+        --enable-helm-operator \
+        --helm-operator-params='--set helm.versions=v3' \
+        --repository-url https://github.com/Azure/reddog-hybrid-arc.git
