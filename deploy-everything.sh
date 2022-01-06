@@ -201,7 +201,7 @@ az k8s-configuration flux create \
     --cluster-name briar-reddog-aks \
     --cluster-type connectedClusters \
     --scope cluster \
-    --name briar-reddog-aks-21283-dep --namespace gitops-fluxv2 \
+    --name briar-reddog-aks-21283-dependencies --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
     --kustomization name=dependencies path=./manifests/dependencies prune=true  
