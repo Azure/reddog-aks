@@ -7,7 +7,7 @@ This repository leverages the [reddog applicaton codebase](https://github.com/Az
 
 ## Getting Started
 
-This repo contains the scripts and configurations to deploy the Red Dog Demo along with the backing Azure Resources. Simply clone the repo and execute the `run.sh` deployment script.
+This repo contains the scripts and configurations to deploy the Red Dog Demo along with the backing Azure Resources. Simply clone the repo and edit and execute the `start.sh` deployment script.
 
 
 ## Architecture

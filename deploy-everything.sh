@@ -22,7 +22,8 @@ if [[ ${AZURE_LOGIN} -ne 0 ]]; then
     export AZURE_LOGIN
 fi
 
-echo "RG Name: " $RG_NAME
+# update az CLI to install extensions automatically
+az config set extension.use_dynamic_install=yes_without_prompt
 
 # create RG
 echo "Creating Azure Resource Group"
@@ -36,6 +37,7 @@ export SSH_PUB_KEY="$(cat ~/.ssh/aks-reddog.pub)"
 
 # get current user
 export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
+echo "RG Name: " $RG_NAME
 echo "Current user: " $CURRENT_USER_ID
 
 # Bicep deployment
@@ -172,6 +174,50 @@ echo 'Create reddog namespace'
 kubectl create ns reddog
 kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
 
+# Configure Arc and GitOps - Dependencies and Red Dog
+echo '****************************************************'
+echo "Configure Arc and GitOps - Dependencies and Red Dog"
+echo '****************************************************'
+export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
+
+az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
+echo "AKS cluster Arc enabled"
+
+echo "Configuring GitOps dependencies deployment"
+# az k8s-configuration create --name $RG_NAME-dep \
+#         --cluster-name $AKS_NAME \
+#         --resource-group $RG_NAME \
+#         --scope cluster \
+#         --cluster-type connectedClusters \
+#         --operator-instance-name flux \
+#         --operator-namespace flux \
+#         --operator-params="--git-readonly --git-path=manifests/dependencies --git-branch=main --manifest-generation=true" \
+#         --enable-helm-operator \
+#         --helm-operator-params='--set helm.versions=v3' \
+#         --repository-url https://github.com/Azure/reddog-aks.git
+
+az k8s-configuration flux create \
+    --resource-group briar-reddog-aks-21283 \
+    --cluster-name briar-reddog-aks \
+    --cluster-type connectedClusters \
+    --scope cluster \
+    --name briar-reddog-aks-21283-dep --namespace gitops-fluxv2 \
+    --url https://github.com/Azure/reddog-aks.git \
+    --branch main \
+    --kustomization name=dependencies path=./manifests/dependencies prune=true  
+
+az k8s-configuration flux list --resource-group briar-reddog-aks-21283 --cluster-name briar-reddog-aks --cluster-type connectedClusters
+
+az k8s-configuration flux show --name briar-reddog-aks-21283-dep \
+    --resource-group briar-reddog-aks-21283 \
+    --cluster-name briar-reddog-aks \
+    --cluster-type connectedClusters -o json
+
+az k8s-configuration flux delete --name briar-reddog-aks-21283-dep \
+    --resource-group briar-reddog-aks-21283 \
+    --cluster-name briar-reddog-aks \
+    --cluster-type connectedClusters -o json    
+
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
 echo "Allow Azure Services to access Azure SQL (Firewall)"
@@ -186,26 +232,7 @@ az sql server firewall-rule create \
 echo "Installing Zipkin for Dapr"
 kubectl create ns zipkin
 kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
-kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411    
+kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
-# Configure Arc and GitOps - Dependencies and Red Dog
-echo '****************************************************'
-echo "Configure Arc and GitOps - Dependencies and Red Dog"
-echo '****************************************************'
-export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
-
-az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
-echo "AKS cluster Arc enabled"
-
-echo "Configuring GitOps dependencies deployment"
-az k8s-configuration create --name $RG_NAME-dep \
-        --cluster-name $AKS_NAME \
-        --resource-group $RG_NAME \
-        --scope cluster \
-        --cluster-type connectedClusters \
-        --operator-instance-name flux \
-        --operator-namespace flux \
-        --operator-params="--git-readonly --git-path=manifests/dependencies --git-branch=main --manifest-generation=true" \
-        --enable-helm-operator \
-        --helm-operator-params='--set helm.versions=v3' \
-        --repository-url https://github.com/Azure/reddog-hybrid-arc.git
+#  Wait for dapr to start
+sleep 60
