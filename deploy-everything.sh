@@ -7,7 +7,7 @@ echo '****************************************************'
 echo "Starting Red Dog on AKS deployment"
 echo '****************************************************'
 
-# https://github.com/Azure/reddog-hybrid-arc/blob/main/infra/common/utils.subr
+start_time=$(date +%s)
 
 # Check for Azure login
 echo "Checking to ensure logged into Azure CLI"
@@ -151,14 +151,14 @@ echo '****************************************************'
     echo "KeyVault secret created: storage-key"
 
     # cosmosdb
-    export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Cosmos URI: " $COSMOS_URI
-    export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Cosmos Account: " $COSMOS_ACCOUNT
-    export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
+    # export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # echo "Cosmos URI: " $COSMOS_URI
+    # export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # echo "Cosmos Account: " $COSMOS_ACCOUNT
+    # export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
     
-    az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
-    echo "KeyVault secret created: cosmos-primary-rw-key"
+    # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
+    # echo "KeyVault secret created: cosmos-primary-rw-key"
 
     # service bus
     export SB_NAME=$(jq -r .serviceBusName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -199,19 +199,15 @@ echo "AKS cluster Arc enabled"
 
 echo "Configuring GitOps dependencies deployment"
 
-
-
-# az k8s-configuration create --name $RG_NAME-dep \
-#         --cluster-name $AKS_NAME \
-#         --resource-group $RG_NAME \
-#         --scope cluster \
-#         --cluster-type connectedClusters \
-#         --operator-instance-name flux \
-#         --operator-namespace flux \
-#         --operator-params="--git-readonly --git-path=manifests/dependencies --git-branch=main --manifest-generation=true" \
-#         --enable-helm-operator \
-#         --helm-operator-params='--set helm.versions=v3' \
-#         --repository-url https://github.com/Azure/reddog-aks.git
+az k8s-configuration flux create \
+    --resource-group $RG_NAME \
+    --cluster-name $AKS_NAME \
+    --cluster-type connectedClusters \
+    --scope cluster \
+    --name $AKS_NAME-dep --namespace flux-system \
+    --url https://github.com/Azure/reddog-aks.git \
+    --branch main \
+    --kustomization name=dependencies path=./manifests/dependencies prune=true  
 
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -230,4 +226,21 @@ kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
 # Wait for dapr to start
-# sleep 60
+sleep 60
+
+echo "Configuring GitOps red dog services deployment"
+
+az k8s-configuration flux create \
+    --resource-group $RG_NAME \
+    --cluster-name $AKS_NAME \
+    --cluster-type connectedClusters \
+    --scope cluster \
+    --name $AKS_NAME --namespace flux-system \
+    --url https://github.com/Azure/reddog-aks.git \
+    --branch main \
+    --kustomization name=services path=./manifests/base prune=true  
+
+# elapsed time with second resolution
+end_time=$(date +%s)
+elapsed=$(( end_time - start_time ))
+eval "echo Script elapsed time: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hours %M minutes %S seconds')"
