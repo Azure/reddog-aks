@@ -10,6 +10,7 @@ spec:
       sourceRef:
         kind: HelmRepository
         name: dapr
+        namespace: flux-system
       version: 1.3.0
   interval: 1h0m0s
   install:
