@@ -2,21 +2,15 @@ apiVersion: dapr.io/v1alpha1
 kind: Component
 metadata:
   name: reddog.pubsub
-  namespace: reddog-retail
+  namespace: reddog
 spec:
-  type: pubsub.rabbitmq
-  version: v1
-  metadata: 
-    - name: host
+  type: pubsub.azure.servicebus
+  version: v1  
+  metadata:
+    - name: connectionString
       secretKeyRef:
-        name: rabbitmq-connectionstring
-        key: rabbitmq-connectionstring
-    - name: durable
-      value: true
-    - name: deleteWhenUnused
-      value: false      
-    - name: deliveryMode
-      value: 2
+        name: sb-root-connectionstring
+        key: sb-root-connectionstring
 scopes:
   - order-service
   - make-line-service

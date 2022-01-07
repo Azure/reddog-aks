@@ -2,7 +2,7 @@ apiVersion: dapr.io/v1alpha1
 kind: Configuration
 metadata:
   name: reddog.config
-  namespace: reddog-retail
+  namespace: reddog
 spec:
   tracing:
     samplingRate: "1"
