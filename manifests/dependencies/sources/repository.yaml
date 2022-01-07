@@ -1,7 +1,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1beta1
 kind: HelmRepository
 metadata:
-  name: dapr-github
+  name: dapr
 spec:
   interval: 30m
   url: https://dapr.github.io/helm-charts

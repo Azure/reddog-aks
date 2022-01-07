@@ -23,10 +23,10 @@ param adminPublicKey string
 
 // Additional Params
 param serviceBusNamespaceName string = resourceGroup().name
-param redisName string = resourceGroup().name
-param cosmosAccountName string = resourceGroup().name
-param cosmosDatabaseName string = 'reddog'
-param cosmosCollectionName string = 'loyalty'
+// param redisName string = resourceGroup().name
+// param cosmosAccountName string = resourceGroup().name
+// param cosmosDatabaseName string = 'reddog'
+// param cosmosCollectionName string = 'loyalty'
 param storageAccountName string = replace(resourceGroup().name, '-', '')
 param blobContainerName string = 'receipts'
 param sqlServerName string = resourceGroup().name
@@ -79,7 +79,8 @@ module keyvault 'modules/keyvault.bicep' = {
 module aks 'modules/aks.bicep' = {
   name: 'aks-deployment'
   params: {
-    name: format('{0}-aks',name)
+    name: resourceGroup().name
+    //name: format('{0}-aks',name)
     adminUsername: adminUsername
     adminPublicKey: adminPublicKey
     subnetId: '${vnet.id}/subnets/${aksSubnetInfo.name}'
@@ -95,23 +96,23 @@ module serviceBus 'modules/servicebus.bicep' = {
   }
 }
 
-module redis 'modules/redis.bicep' = {
-  name: '${deployment().name}--redis'
-  params: {
-    redisName: redisName
-    location: resourceGroup().location
-  }
-}
+// module redis 'modules/redis.bicep' = {
+//   name: '${deployment().name}--redis'
+//   params: {
+//     redisName: redisName
+//     location: resourceGroup().location
+//   }
+// }
 
-module cosmos 'modules/cosmos.bicep' = {
-  name: '${deployment().name}--cosmos'
-  params: {
-    cosmosAccountName: cosmosAccountName
-    cosmosDatabaseName: cosmosDatabaseName
-    cosmosCollectionName: cosmosCollectionName
-    location: resourceGroup().location
-  }
-}
+// module cosmos 'modules/cosmos.bicep' = {
+//   name: '${deployment().name}--cosmos'
+//   params: {
+//     cosmosAccountName: cosmosAccountName
+//     cosmosDatabaseName: cosmosDatabaseName
+//     cosmosCollectionName: cosmosCollectionName
+//     location: resourceGroup().location
+//   }
+// }
 
 module storage 'modules/storage.bicep' = {
   name: '${deployment().name}--storage'
@@ -139,12 +140,12 @@ output aksName string = aks.outputs.name
 output sqlServerName string = sqlServer.outputs.sqlServerName
 output sqlAdmin string = sqlServer.outputs.sqlAdmin
 output sqlPassword string = sqlServer.outputs.sqlPassword
-output cosmosUri string = cosmos.outputs.cosmosUri
-output cosmosAccountName string = cosmos.outputs.cosmosAccountName
+// output cosmosUri string = cosmos.outputs.cosmosUri
+// output cosmosAccountName string = cosmos.outputs.cosmosAccountName
 output serviceBusName string = serviceBus.outputs.sbName
 output serviceBusConnectString string = serviceBus.outputs.rootConnectionString
 output storageAccountName string = storage.outputs.storageAccountName
 output storageAccountKey string = storage.outputs.accessKey
-output redisHost string = redis.outputs.redisHost
-output redisSslPort int = redis.outputs.redisSslPort
-output redisPassword string = redis.outputs.redisPassword
+// output redisHost string = redis.outputs.redisHost
+// output redisSslPort int = redis.outputs.redisSslPort
+// output redisPassword string = redis.outputs.redisPassword

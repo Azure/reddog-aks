@@ -1,6 +1,7 @@
 mkdir -p outputs
 export RG_NAME=$1
 export LOCATION=$2
+export SUFFIX=$3
 
 echo '****************************************************'
 echo "Starting Red Dog on AKS deployment"
@@ -64,6 +65,28 @@ echo '****************************************************'
 echo "Bicep deployment outputs:"
 az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.outputs > "./outputs/$RG_NAME-bicep-outputs.json"
 
+# Connect to AKS and create namespace, redis
+echo '****************************************************'
+echo "Connect to AKS and create namespace, secrets"
+echo '****************************************************'
+AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
+echo "AKS Cluster Name: " $AKS_NAME
+az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
+
+echo 'Create namespaces'
+kubectl create ns reddog
+kubectl create ns redis
+
+echo 'Deploying Redis Helm chart' # https://bitnami.com/stack/redis/helm
+export REDIS_PASSWD='w@lkingth3d0g'
+helm repo add azure-marketplace https://marketplace.azurecr.io/helm/v1/repo
+helm install redis-release azure-marketplace/redis \
+    --namespace redis \
+    --set auth.password=$REDIS_PASSWD \
+    --set replica.replicaCount=2
+
+kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog    
+
 # Initialize KV  
 echo "Create SP for KV and setup permissions"
 export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName.value)
@@ -111,6 +134,9 @@ az keyvault secret download \
     --encoding base64 \
     --file ./kv-$RG_NAME-cert.pfx
 
+# Create K8s secret for above pfx (used by Dapr)
+kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
+
 # Write keys to KV
 echo '****************************************************'
 echo "Writing all secrets to KeyVault"
@@ -152,27 +178,15 @@ echo '****************************************************'
     echo "KeyVault secret created: reddog-sql"
 
     # Redis
-    export REDIS_HOST=$(jq -r .redisHost.value ./outputs/$RG_NAME-bicep-outputs.json)
-    export REDIS_PORT=$(jq -r .redisSslPort.value ./outputs/$RG_NAME-bicep-outputs.json)
-    export REDIS_FQDN="${REDIS_HOST}:${REDIS_PORT}"
-    export REDIS_PASSWORD=$(jq -r .redisPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # export REDIS_HOST=$(jq -r .redisHost.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # export REDIS_PORT=$(jq -r .redisSslPort.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # export REDIS_FQDN="${REDIS_HOST}:${REDIS_PORT}"
+    # export REDIS_PASSWORD=$(jq -r .redisPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
 
-    az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
-    echo "KeyVault secret created: redis-server"
-    az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWORD
-    echo "KeyVault secret created: redis-password"
-
-# Connect to AKS and create namespace, secrets 
-echo '****************************************************'
-echo "Connect to AKS and create namespace, secrets"
-echo '****************************************************'
-AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
-echo "AKS Cluster Name: " $AKS_NAME
-az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
-
-echo 'Create reddog namespace'
-kubectl create ns reddog
-kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
+    # az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
+    # echo "KeyVault secret created: redis-server"
+    # az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWORD
+    # echo "KeyVault secret created: redis-password"
 
 # Configure Arc and GitOps - Dependencies and Red Dog
 echo '****************************************************'
@@ -184,6 +198,9 @@ az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
 echo "AKS cluster Arc enabled"
 
 echo "Configuring GitOps dependencies deployment"
+
+
+
 # az k8s-configuration create --name $RG_NAME-dep \
 #         --cluster-name $AKS_NAME \
 #         --resource-group $RG_NAME \
@@ -195,28 +212,6 @@ echo "Configuring GitOps dependencies deployment"
 #         --enable-helm-operator \
 #         --helm-operator-params='--set helm.versions=v3' \
 #         --repository-url https://github.com/Azure/reddog-aks.git
-
-az k8s-configuration flux create \
-    --resource-group briar-reddog-aks-21283 \
-    --cluster-name briar-reddog-aks \
-    --cluster-type connectedClusters \
-    --scope cluster \
-    --name briar-reddog-aks-21283-dependencies --namespace flux-system \
-    --url https://github.com/Azure/reddog-aks.git \
-    --branch main \
-    --kustomization name=dependencies path=./manifests/dependencies prune=true  
-
-az k8s-configuration flux list --resource-group briar-reddog-aks-21283 --cluster-name briar-reddog-aks --cluster-type connectedClusters
-
-az k8s-configuration flux show --name briar-reddog-aks-21283-dep \
-    --resource-group briar-reddog-aks-21283 \
-    --cluster-name briar-reddog-aks \
-    --cluster-type connectedClusters -o json
-
-az k8s-configuration flux delete --name briar-reddog-aks-21283-dep \
-    --resource-group briar-reddog-aks-21283 \
-    --cluster-name briar-reddog-aks \
-    --cluster-type connectedClusters -o json    
 
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -234,5 +229,5 @@ kubectl create ns zipkin
 kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
-#  Wait for dapr to start
-sleep 60
+# Wait for dapr to start
+# sleep 60
