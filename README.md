@@ -12,8 +12,6 @@ This repo contains the scripts and configurations to deploy the Red Dog Demo alo
 
 ## Architecture
 
-> Need to update based on AKS deployment. 
-
 ![Architecture diagram](assets/reddog_architecture.png)
 
 This repository leverages bicep templates in order to execute the deployment of the Reddog applicaton and the supporting Azure Infrastructure. Bicep is a Domain Specific Language (DSL) for deploying Azure resources declaratively and provides a transparent abstraction over ARM and ARM templates.  

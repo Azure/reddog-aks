@@ -2,39 +2,47 @@
 
 ```bash
 
-az k8s-configuration flux create \
-    --resource-group briar-reddog-aks-14921 \
-    --cluster-name briar-reddog-aks-14921 \
-    --cluster-type connectedClusters \
-    --scope cluster \
-    --name briar-reddog-aks-14921-dependencies --namespace flux-system \
-    --url https://github.com/Azure/reddog-aks.git \
-    --branch main \
-    --kustomization name=dependencies path=./manifests/dependencies prune=true  
+# service principal cleanup
+az ad sp list --show-mine -o table
+
+az ad sp list --show-mine -o json --query "[?contains(displayName, 'azure-cli')]"
+
+az ad sp list --show-mine -o json --query "[?contains(displayName, 'reddog')]" | jq -r '.[] | .appId' | xargs -P 4 -n 12 -I % az ad sp delete --id %
+
+# flux v2
+export AKSNAME=briar-reddog-aks-6015
 
 az k8s-configuration flux create \
-    --resource-group briar-reddog-aks-4845 \
-    --cluster-name briar-reddog-aks-4845 \
+    --resource-group $AKSNAME \
+    --cluster-name $AKSNAME \
     --cluster-type connectedClusters \
     --scope cluster \
-    --name briar-reddog-aks-4845 --namespace flux-system \
+    --name $AKSNAME --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
 
-az k8s-configuration flux list --resource-group briar-reddog-aks-14921 --cluster-name briar-reddog-aks-14921 --cluster-type connectedClusters
+az k8s-configuration flux list --resource-group $AKSNAME --cluster-name $AKSNAME --cluster-type connectedClusters
 
-az k8s-configuration flux show --name briar-reddog-aks-14921-dependencies \
-    --resource-group briar-reddog-aks-14921 \
-    --cluster-name briar-reddog-aks-14921 \
+az k8s-configuration flux show --name $AKSNAME \
+    --resource-group $AKSNAME \
+    --cluster-name $AKSNAME \
     --cluster-type connectedClusters -o json
 
-az k8s-configuration flux delete --name briar-reddog-aks-14921-dependencies \
-    --resource-group briar-reddog-aks-14921 \
-    --cluster-name briar-reddog-aks-14921 \
+az k8s-configuration flux delete --name $AKSNAME \
+    --resource-group $AKSNAME \
+    --cluster-name $AKSNAME \
     --cluster-type connectedClusters
 
+# Create K8s secret for above pfx (used by Dapr)
+kubectl create secret generic reddog.secretstore \
+    --namespace reddog \
+    --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx \
+    --from-literal=vaultName=$KV_NAME \
+    --from-literal=spnClientId=$SP_APPID \
+    --from-literal=spnTenantId=$TENANT_ID
 
+kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME --from-literal=spnClientId=$SP_APPID --from-literal=spnTenantId=$TENANT_ID
 
 
 ```

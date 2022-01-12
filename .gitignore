@@ -359,3 +359,5 @@ ssh_keys/
 outputs/
 
 *.pfx
+
+config.json
