@@ -214,8 +214,8 @@ echo '****************************************************'
 
     # az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
     # echo "KeyVault secret created: redis-server"
-    # az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWORD
-    # echo "KeyVault secret created: redis-password"
+    az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWD
+    echo 'KeyVault secret created: redis-password'
 
 # Configure AKS Flux v2 GitOps - dependencies and apps
 echo ''
@@ -227,6 +227,7 @@ export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 #az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
 #echo "AKS cluster Arc enabled"
 
+echo ''
 echo 'Configuring GitOps Red Dog dependencies deployment'
 
 az k8s-configuration flux create \
@@ -241,6 +242,7 @@ az k8s-configuration flux create \
 
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
+echo ''
 echo 'Allow Azure Services to access Azure SQL (Firewall)'
 az sql server firewall-rule create \
     --resource-group $RG_NAME \
@@ -250,14 +252,18 @@ az sql server firewall-rule create \
     --end-ip-address 0.0.0.0
 
 # Zipkin
+echo ''
 echo 'Installing Zipkin for Dapr'
 kubectl create ns zipkin
 kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
 # Wait for dapr to start
+echo ''
+echo 'waiting 60 seconds for Dapr to fully start'
 sleep 60
 
+echo ''
 echo 'Configuring GitOps Red Dog apps deployment'
 
 az k8s-configuration flux create \
