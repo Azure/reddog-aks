@@ -22,17 +22,18 @@ az k8s-configuration flux create \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
 
-az k8s-configuration flux list --resource-group $AKSNAME --cluster-name $AKSNAME --cluster-type connectedClusters
+az k8s-configuration flux list --resource-group $AKSNAME \
+    --cluster-name $AKSNAME --cluster-type connectedClusters
 
 az k8s-configuration flux show --name $AKSNAME \
     --resource-group $AKSNAME \
     --cluster-name $AKSNAME \
     --cluster-type connectedClusters -o json
 
-az k8s-configuration flux delete --name $AKSNAME \
+az k8s-configuration flux delete --name $AKSNAME-apps \
     --resource-group $AKSNAME \
     --cluster-name $AKSNAME \
-    --force true \
+    --yes \
     --cluster-type connectedClusters
 
 # Create K8s secret for above pfx (used by Dapr)
@@ -43,14 +44,13 @@ kubectl create secret generic reddog.secretstore \
     --from-literal=spnClientId=$SP_APPID \
     --from-literal=spnTenantId=$TENANT_ID
 
-kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME --from-literal=spnClientId=$SP_APPID --from-literal=spnTenantId=$TENANT_ID
-
 kubectl create secret generic reddog.secretstore \
     --namespace reddog \
     --from-file=secretstore-cert=./kv-briar-reddog-aks-6015-cert.pfx \
-    --from-literal=vaultName=briar-reddog-kv-no3e \
-    --from-literal=spnClientId=3abc5ac9-afd4-4115-a9a5-44c6603217fa \
-    --from-literal=spnTenantId=$72f988bf-86f1-41af-91ab-2d7cd011db47
+    --from-literal=vaultName='briar-reddog-kv-no3e' \
+    --from-literal=spnClientId='3abc5ac9-afd4-4115-a9a5-44c6603217fa' \
+    --from-literal=spnTenantId='72f988bf-86f1-41af-91ab-2d7cd011db47'
+
 
 
 ```

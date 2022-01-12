@@ -231,7 +231,7 @@ az k8s-configuration flux create \
     --cluster-name $AKS_NAME \
     --cluster-type connectedClusters \
     --scope cluster \
-    --name $AKS_NAME --namespace flux-system \
+    --name $AKS_NAME-apps --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  

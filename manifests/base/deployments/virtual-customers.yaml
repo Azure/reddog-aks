@@ -25,10 +25,7 @@ spec:
           imagePullPolicy: Always
           env:
           - name: STORE_ID
-            valueFrom:
-              secretKeyRef:
-                  name: branch.config
-                  key: store_id
+            value: "denver"
           - name: MAX_ITEM_QUANTITY
             value: "9"
           - name: MIN_SEC_TO_PLACE_ORDER
