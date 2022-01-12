@@ -19,7 +19,7 @@ echo '****************************************************'
 echo ''
 
 # Check for Azure login
-echo "Checking to ensure logged into Azure CLI"
+echo 'Checking to ensure logged into Azure CLI'
 AZURE_LOGIN=0 
 # run a command against Azure to check if we are logged in already.
 az group list -o table
@@ -36,6 +36,7 @@ fi
 az config set extension.use_dynamic_install=yes_without_prompt
 
 # setup az CLI features
+echo 'Configuring extensions and features for az CLI'
 az feature register --namespace Microsoft.ContainerService --name AKS-ExtensionManager
 az provider register --namespace Microsoft.Kubernetes --consent-to-permissions
 az provider register --namespace Microsoft.ContainerService --consent-to-permissions
@@ -48,15 +49,15 @@ echo "Creating Azure Resource Group"
 az group create --name $RG_NAME --location $LOCATION
 
 # create SSH keys
-echo "Generating SSH keys (will overwrite existing)"
+echo 'Generating SSH keys (will overwrite existing)'
 ssh-keygen -f ~/.ssh/aks-reddog -N '' <<< y  
 
 export SSH_PUB_KEY="$(cat ~/.ssh/aks-reddog.pub)"
 
 # get current user
 export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
-echo "RG Name: " $RG_NAME
-echo "Current user: " $CURRENT_USER_ID
+echo 'RG Name: ' $RG_NAME
+echo 'Current user: ' $CURRENT_USER_ID
 
 # Bicep deployment
 echo ''
@@ -89,7 +90,7 @@ echo '****************************************************'
 echo 'Connect to AKS and create namespace, secrets'
 echo '****************************************************'
 AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
-echo "AKS Cluster Name: " $AKS_NAME
+echo 'AKS Cluster Name: ' $AKS_NAME
 az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
 
 echo 'Create namespaces'
@@ -107,9 +108,9 @@ helm install redis-release azure-marketplace/redis \
 kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog    
 
 # Initialize KV  
-echo "Create SP for KV and setup permissions"
+echo 'Create SP for KV and setup permissions'
 export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName.value)
-echo "Key Vault: $KV_NAME"
+echo 'Key Vault: ' $KV_NAME
 az ad sp create-for-rbac \
         --name "http://sp-$RG_NAME.microsoft.com" \
         --only-show-errors \
@@ -119,15 +120,15 @@ az ad sp create-for-rbac \
         --years 1
 
 ## Get SP APP ID
-echo "Getting SP_APPID ..."
+echo 'Getting SP_APPID ...'
 SP_INFO=$(az ad sp list -o json --display-name "http://sp-$RG_NAME.microsoft.com")
 SP_APPID=$(echo $SP_INFO | jq -r .[].appId)  
-echo "AKV SP_APPID: $SP_APPID"      
+echo 'AKV SP_APPID: ' $SP_APPID
 
 ## Get SP Object ID
-echo "Getting SP_OBJECTID ..."
+echo 'Getting SP_OBJECTID ...'
 SP_OBJECTID=$(echo $SP_INFO | jq -r .[].objectId)
-echo "AKV SP_OBJECTID: $SP_OBJECTID"
+echo 'AKV SP_OBJECTID: ' $SP_OBJECTID
 
 # Assign SP to KV with GET permissions
 az keyvault set-policy \
@@ -138,7 +139,7 @@ az keyvault set-policy \
 
 # Assign permissions to the current user
 UPN=$(az ad signed-in-user show  -o json | jq -r '.userPrincipalName')
-echo "User UPN: " $UPN
+echo 'User UPN: ' $UPN
 
 az keyvault set-policy \
     --name $KV_NAME \
@@ -170,11 +171,11 @@ echo '****************************************************'
 
     # storage account
     export STORAGE_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountName.value)
-    echo "Storage Account: $STORAGE_NAME"
+    echo 'Storage Account: ' $STORAGE_NAME
     export STORAGE_KEY=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountKey.value)
     
     az keyvault secret set --vault-name $KV_NAME --name storage-key --value $STORAGE_KEY
-    echo "KeyVault secret created: storage-key"
+    echo 'KeyVault secret created: storage-key'
 
     # cosmosdb
     # export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -191,7 +192,7 @@ echo '****************************************************'
     export SB_CONNECT_STRING=$(jq -r .serviceBusConnectString.value ./outputs/$RG_NAME-bicep-outputs.json)
 
     az keyvault secret set --vault-name $KV_NAME --name sb-root-connectionstring --value $SB_CONNECT_STRING
-    echo "KeyVault secret created: sb-root-connectionstring"
+    echo 'KeyVault secret created: sb-root-connectionstring'
 
     # Azure SQL
     export SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -201,7 +202,7 @@ echo '****************************************************'
     export REDDOG_SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Database=reddoghub;User ID=${SQL_ADMIN_USER_NAME};Password=${SQL_ADMIN_PASSWD};Encrypt=true;Connection Timeout=30;"
     
     az keyvault secret set --vault-name $KV_NAME --name reddog-sql --value "${REDDOG_SQL_CONNECTION_STRING}"
-    echo "KeyVault secret created: reddog-sql"
+    echo 'KeyVault secret created: reddog-sql'
 
     # Redis
     # export REDIS_HOST=$(jq -r .redisHost.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -224,7 +225,7 @@ export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 #az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
 #echo "AKS cluster Arc enabled"
 
-echo "Configuring GitOps Red Dog dependencies deployment"
+echo 'Configuring GitOps Red Dog dependencies deployment'
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
@@ -238,7 +239,7 @@ az k8s-configuration flux create \
 
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
-echo "Allow Azure Services to access Azure SQL (Firewall)"
+echo 'Allow Azure Services to access Azure SQL (Firewall)'
 az sql server firewall-rule create \
     --resource-group $RG_NAME \
     --server $AZURE_SQL_SERVER \
@@ -247,7 +248,7 @@ az sql server firewall-rule create \
     --end-ip-address 0.0.0.0
 
 # Zipkin
-echo "Installing Zipkin for Dapr"
+echo 'Installing Zipkin for Dapr'
 kubectl create ns zipkin
 kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
@@ -255,7 +256,7 @@ kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411
 # Wait for dapr to start
 sleep 60
 
-echo "Configuring GitOps Red Dog apps deployment"
+echo 'Configuring GitOps Red Dog apps deployment'
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
