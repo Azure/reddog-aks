@@ -43,6 +43,8 @@ az provider register --namespace Microsoft.ContainerService --consent-to-permiss
 az provider register --namespace Microsoft.KubernetesConfiguration --consent-to-permissions
 az extension add -n k8s-configuration
 az extension add -n k8s-extension
+az extension update -n k8s-configuration
+az extension update -n k8s-extension
 
 # create RG
 echo "Creating Azure Resource Group"
@@ -230,7 +232,7 @@ echo 'Configuring GitOps Red Dog dependencies deployment'
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
     --cluster-name $AKS_NAME \
-    --cluster-type connectedClusters \
+    --cluster-type managedClusters \
     --scope cluster \
     --name $AKS_NAME-dep --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
@@ -261,7 +263,7 @@ echo 'Configuring GitOps Red Dog apps deployment'
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
     --cluster-name $AKS_NAME \
-    --cluster-type connectedClusters \
+    --cluster-type managedClusters \
     --scope cluster \
     --name $AKS_NAME-apps --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \

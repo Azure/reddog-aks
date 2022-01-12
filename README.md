@@ -7,8 +7,11 @@ This repository leverages the [reddog applicaton codebase](https://github.com/Az
 
 ## Getting Started
 
-This repo contains the scripts and configurations to deploy the Red Dog Demo along with the backing Azure Resources. Simply clone the repo and edit and execute the `start.sh` deployment script.
+This repo contains the scripts and configurations to deploy the Red Dog Demo along with the backing Azure Resources. Here's how to get started: 
 
+* Clone or fork the repo
+* Create a `config.json` file based on the example in the repo and update values accordingly
+* Execute the `start.sh` deployment script.
 
 ## Architecture
 
@@ -23,12 +26,6 @@ A logical container which holds all resources needed to run the above solution i
 
 #### AKS Cluster
 The application microservices will run in this cluster
-
-#### Azure Cosmos DB 
-Microsoft's NoSQL multi-model managed database as a service offering which is used as the Dapr State Store component implementation for the Loyalty Service
-
-#### Azure Cache for Redis 
-A distributed, in-memory, scalable solution providing super-fast data access which is used as the Dapr State Store component implementation for the Makeline Service
 
 #### Azure Service Bus 
 A fully managed enterprise message broker with message queues and publish-subscribe topics used as the Dapr PubSub component implementation. This component is leveraged by multiple services, with the Order Service publishing messages to four other services in the application: Makelike, Accounting, Loyalty and Receipt

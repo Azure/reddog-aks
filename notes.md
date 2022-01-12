@@ -9,15 +9,25 @@ az ad sp list --show-mine -o json --query "[?contains(displayName, 'azure-cli')]
 
 az ad sp list --show-mine -o json --query "[?contains(displayName, 'reddog')]" | jq -r '.[] | .appId' | xargs -P 4 -n 12 -I % az ad sp delete --id %
 
-# flux v2
-export AKSNAME=briar-reddog-aks-1198
-
+# testing
+export AKSNAME=briar-reddog-aks-7290
 az aks get-credentials -g $AKSNAME -n $AKSNAME
+
+# flux v2
+az k8s-configuration flux create \
+    --resource-group $AKSNAME \
+    --cluster-name $AKSNAME \
+    --cluster-type managedClusters \
+    --scope cluster \
+    --name $AKSNAME-dep --namespace flux-system \
+    --url https://github.com/Azure/reddog-aks.git \
+    --branch main \
+    --kustomization name=dependencies path=./manifests/dependencies prune=true 
 
 az k8s-configuration flux create \
     --resource-group $AKSNAME \
     --cluster-name $AKSNAME \
-    --cluster-type connectedClusters \
+    --cluster-type managedClusters \
     --scope cluster \
     --name $AKSNAME-apps --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
@@ -25,7 +35,7 @@ az k8s-configuration flux create \
     --kustomization name=services path=./manifests/base prune=true  
 
 az k8s-configuration flux list --resource-group $AKSNAME \
-    --cluster-name $AKSNAME --cluster-type connectedClusters
+    --cluster-name $AKSNAME --cluster-type managedClusters
 
 az k8s-configuration flux show --name $AKSNAME \
     --resource-group $AKSNAME \
