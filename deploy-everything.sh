@@ -5,6 +5,19 @@ export SUFFIX=$3
 
 start_time=$(date +%s)
 
+# show all params
+echo '****************************************************'
+echo 'Starting Red Dog on AKS deployment'
+echo ''
+echo 'Parameters:'
+echo 'SUBSCRIPTION: ' $SUBSCRIPTION_ID
+echo 'TENANT: ' $TENANT_ID
+echo 'LOCATION: ' $LOCATION
+echo 'RG_NAME: ' $RG_NAME
+echo 'LOGFILE_NAME: ' $LOGFILE_NAME
+echo '****************************************************'
+echo ''
+
 # Check for Azure login
 echo "Checking to ensure logged into Azure CLI"
 AZURE_LOGIN=0 
@@ -22,6 +35,14 @@ fi
 # update az CLI to install extensions automatically
 az config set extension.use_dynamic_install=yes_without_prompt
 
+# setup az CLI features
+az feature register --namespace Microsoft.ContainerService --name AKS-ExtensionManager
+az provider register --namespace Microsoft.Kubernetes --consent-to-permissions
+az provider register --namespace Microsoft.ContainerService --consent-to-permissions
+az provider register --namespace Microsoft.KubernetesConfiguration --consent-to-permissions
+az extension add -n k8s-configuration
+az extension add -n k8s-extension
+
 # create RG
 echo "Creating Azure Resource Group"
 az group create --name $RG_NAME --location $LOCATION
@@ -38,8 +59,9 @@ echo "RG Name: " $RG_NAME
 echo "Current user: " $CURRENT_USER_ID
 
 # Bicep deployment
+echo ''
 echo '****************************************************'
-echo "Starting Bicep deployment of resources"
+echo 'Starting Bicep deployment of resources'
 echo '****************************************************'
 
 az deployment group create \
@@ -53,17 +75,18 @@ az deployment group create \
     --parameters adminPublicKey="$SSH_PUB_KEY" \
     --parameters currentUserId="$CURRENT_USER_ID"
 
+echo ''
 echo '****************************************************'
-echo "Base infra deployed. Starting config/app deployment"
+echo 'Base infra deployed. Starting config/app deployment'
 echo '****************************************************'    
 
 # Save deployment outputs
-echo "Bicep deployment outputs:"
 az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.outputs > "./outputs/$RG_NAME-bicep-outputs.json"
 
 # Connect to AKS and create namespace, redis
+echo ''
 echo '****************************************************'
-echo "Connect to AKS and create namespace, secrets"
+echo 'Connect to AKS and create namespace, secrets'
 echo '****************************************************'
 AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
 echo "AKS Cluster Name: " $AKS_NAME
@@ -131,11 +154,18 @@ az keyvault secret download \
     --file ./kv-$RG_NAME-cert.pfx
 
 # Create K8s secret for above pfx (used by Dapr)
-kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
+# kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
+kubectl create secret generic reddog.secretstore \
+    --namespace reddog \
+    --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx \
+    --from-literal=vaultName=$KV_NAME \
+    --from-literal=spnClientId=$SP_APPID \
+    --from-literal=spnTenantId=$TENANT_ID
 
 # Write keys to KV
+echo ''
 echo '****************************************************'
-echo "Writing all secrets to KeyVault"
+echo 'Writing all secrets to KeyVault'
 echo '****************************************************'
 
     # storage account
@@ -184,16 +214,17 @@ echo '****************************************************'
     # az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWORD
     # echo "KeyVault secret created: redis-password"
 
-# Configure Arc and GitOps - Dependencies and Red Dog
+# Configure AKS Flux v2 GitOps - dependencies and apps
+echo ''
 echo '****************************************************'
-echo "Configure Arc and GitOps - Dependencies and Red Dog"
+echo 'Configure AKS Flux v2 GitOps - dependencies and apps'
 echo '****************************************************'
 export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 
-az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
-echo "AKS cluster Arc enabled"
+#az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
+#echo "AKS cluster Arc enabled"
 
-echo "Configuring GitOps dependencies deployment"
+echo "Configuring GitOps Red Dog dependencies deployment"
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
@@ -224,7 +255,7 @@ kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411
 # Wait for dapr to start
 sleep 60
 
-echo "Configuring GitOps red dog services deployment"
+echo "Configuring GitOps Red Dog apps deployment"
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \

@@ -10,7 +10,9 @@ az ad sp list --show-mine -o json --query "[?contains(displayName, 'azure-cli')]
 az ad sp list --show-mine -o json --query "[?contains(displayName, 'reddog')]" | jq -r '.[] | .appId' | xargs -P 4 -n 12 -I % az ad sp delete --id %
 
 # flux v2
-export AKSNAME=briar-reddog-aks-6015
+export AKSNAME=briar-reddog-aks-1198
+
+az aks get-credentials -g $AKSNAME -n $AKSNAME
 
 az k8s-configuration flux create \
     --resource-group $AKSNAME \

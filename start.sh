@@ -12,17 +12,4 @@ export SUFFIX=$RANDOM
 export RG_NAME=$PREFIX-reddog-aks-$SUFFIX
 export LOGFILE_NAME="./logs/${RG_NAME}.log"
 
-# show all params
-echo '****************************************************'
-echo "Starting Red Dog on AKS deployment"
-echo ""
-echo "Parameters:"
-echo "PREFIX: $PREFIX"
-echo "SUBSCRIPTION: $SUBSCRIPTION_ID"
-echo "TENANT: $TENANT_ID"
-echo "LOCATION: $LOCATION"
-echo "RG_NAME: $RG_NAME"
-echo "LOGFILE_NAME: $LOGFILE_NAME"
-echo '****************************************************'
-
 ./deploy-everything.sh $RG_NAME $LOCATION $SUFFIX 2>&1 | tee -a $LOGFILE_NAME
