@@ -3,10 +3,6 @@ export RG_NAME=$1
 export LOCATION=$2
 export SUFFIX=$3
 
-echo '****************************************************'
-echo "Starting Red Dog on AKS deployment"
-echo '****************************************************'
-
 start_time=$(date +%s)
 
 # Check for Azure login
