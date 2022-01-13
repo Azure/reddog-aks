@@ -8,7 +8,7 @@ resources:
 - order-service.yaml
 - rbac.yaml
 - receipt-generation-service.yaml
-- services-for-ui.yaml
+- services-external.yaml
 - ui.yaml
 - virtual-customers.yaml
 - virtual-worker.yaml
