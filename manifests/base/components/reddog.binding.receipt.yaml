@@ -8,7 +8,7 @@ spec:
   version: v1
   metadata:
     - name: storageAccount
-      value: reddogreceipts
+      value: briarreddogaks12187
     - name: container
       value: receipts
     - name: storageAccessKey
