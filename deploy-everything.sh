@@ -157,7 +157,6 @@ az keyvault secret download \
     --file ./kv-$RG_NAME-cert.pfx
 
 # Create K8s secret for above pfx (used by Dapr)
-# kubectl create secret generic -n reddog reddog.secretstore --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx --from-literal=vaultName=$KV_NAME
 kubectl create secret generic reddog.secretstore \
     --namespace reddog \
     --from-file=secretstore-cert=./kv-$RG_NAME-cert.pfx \
@@ -178,16 +177,6 @@ echo '****************************************************'
     
     az keyvault secret set --vault-name $KV_NAME --name blob-storage-key --value $STORAGE_KEY
     echo 'KeyVault secret created: storage-key'
-
-    # cosmosdb
-    # export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
-    # echo "Cosmos URI: " $COSMOS_URI
-    # export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
-    # echo "Cosmos Account: " $COSMOS_ACCOUNT
-    # export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
-    
-    # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
-    # echo "KeyVault secret created: cosmos-primary-rw-key"
 
     # service bus
     export SB_NAME=$(jq -r .serviceBusName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -217,6 +206,16 @@ echo '****************************************************'
     az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWD
     echo 'KeyVault secret created: redis-password'
 
+    # cosmosdb
+    # export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # echo "Cosmos URI: " $COSMOS_URI
+    # export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
+    # echo "Cosmos Account: " $COSMOS_ACCOUNT
+    # export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
+    
+    # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
+    # echo "KeyVault secret created: cosmos-primary-rw-key"    
+
 # Configure AKS Flux v2 GitOps - dependencies and apps
 echo ''
 echo '****************************************************'
@@ -224,11 +223,12 @@ echo 'Configure AKS Flux v2 GitOps - dependencies and apps'
 echo '****************************************************'
 export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 
-#az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
-#echo "AKS cluster Arc enabled"
+# Arc not needed with AKS GitOps extension. https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-flux2
+# az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
+# echo "AKS cluster Arc enabled"
 
 echo ''
-echo 'Configuring GitOps Red Dog dependencies deployment'
+echo 'GitOps Red Dog dependencies deployment'
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
@@ -264,7 +264,7 @@ echo 'waiting 60 seconds for Dapr to fully start'
 sleep 60
 
 echo ''
-echo 'Configuring GitOps Red Dog apps deployment'
+echo 'GitOps Red Dog apps deployment'
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \

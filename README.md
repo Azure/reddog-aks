@@ -14,6 +14,8 @@ This repo contains the scripts and configurations to deploy the Red Dog Demo alo
 * Create a `config.json` file based on the example in the repo and update values accordingly
 * Execute the `start.sh` deployment script.
 
+The `cleanup.sh` script will remove local log files and certs, but it does not delete the Resource Group. 
+
 ## Architecture
 
 ![Architecture diagram](assets/reddog_architecture.png)
