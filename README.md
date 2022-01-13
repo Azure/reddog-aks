@@ -9,7 +9,8 @@ This repository leverages the [reddog applicaton codebase](https://github.com/Az
 
 This repo contains the scripts and configurations to deploy the Red Dog Demo along with the backing Azure Resources. Here's how to get started: 
 
-* Clone or fork the repo
+* If you plan to make any code changes or contribute, we suggest you fork the repo first
+* Create an GitHub Codespace 
 * Create a `config.json` file based on the example in the repo and update values accordingly
 * Execute the `start.sh` deployment script.
 

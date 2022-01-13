@@ -176,7 +176,7 @@ echo '****************************************************'
     echo 'Storage Account: ' $STORAGE_NAME
     export STORAGE_KEY=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountKey.value)
     
-    az keyvault secret set --vault-name $KV_NAME --name storage-key --value $STORAGE_KEY
+    az keyvault secret set --vault-name $KV_NAME --name blob-storage-key --value $STORAGE_KEY
     echo 'KeyVault secret created: storage-key'
 
     # cosmosdb
@@ -201,7 +201,7 @@ echo '****************************************************'
     export SQL_ADMIN_USER_NAME=$(jq -r .sqlAdmin.value ./outputs/$RG_NAME-bicep-outputs.json)
     export SQL_ADMIN_PASSWD=$(jq -r .sqlPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
     
-    export REDDOG_SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Database=reddoghub;User ID=${SQL_ADMIN_USER_NAME};Password=${SQL_ADMIN_PASSWD};Encrypt=true;Connection Timeout=30;"
+    export REDDOG_SQL_CONNECTION_STRING="Server=tcp:${SQL_SERVER}.database.windows.net,1433;Database=reddog;User ID=${SQL_ADMIN_USER_NAME};Password=${SQL_ADMIN_PASSWD};Encrypt=true;Connection Timeout=30;"
     
     az keyvault secret set --vault-name $KV_NAME --name reddog-sql --value "${REDDOG_SQL_CONNECTION_STRING}"
     echo 'KeyVault secret created: reddog-sql'
