@@ -175,8 +175,11 @@ echo '****************************************************'
     echo 'Storage Account: ' $STORAGE_NAME
     export STORAGE_KEY=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .storageAccountKey.value)
     
+    az keyvault secret set --vault-name $KV_NAME --name blob-storage-account --value $STORAGE_NAME
+    echo 'KeyVault secret created: blob-storage-account'
+
     az keyvault secret set --vault-name $KV_NAME --name blob-storage-key --value $STORAGE_KEY
-    echo 'KeyVault secret created: storage-key'
+    echo 'KeyVault secret created: blob-storage-key'
 
     # service bus
     export SB_NAME=$(jq -r .serviceBusName.value ./outputs/$RG_NAME-bicep-outputs.json)
