@@ -11,7 +11,7 @@ spec:
         kind: HelmRepository
         name: traefik
         namespace: flux-system
-  interval: 1h0m0s
+  interval: 0h20m0s
   values:
     deployment:
       podAnnotations:
