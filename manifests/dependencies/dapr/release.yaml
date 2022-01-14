@@ -1,4 +1,4 @@
-apiVersion: helm.toolkit.fluxcd.io/v2beta1
+ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: dapr
@@ -11,7 +11,6 @@ spec:
         kind: HelmRepository
         name: dapr
         namespace: flux-system
-      version: 1.3.0
   interval: 1h0m0s
   install:
     remediation:

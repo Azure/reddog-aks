@@ -10,7 +10,7 @@ az ad sp list --show-mine -o json --query "[?contains(displayName, 'azure-cli')]
 az ad sp list --show-mine -o json --query "[?contains(displayName, 'reddog')]" | jq -r '.[] | .appId' | xargs -P 4 -n 12 -I % az ad sp delete --id %
 
 # testing
-export AKSNAME=briar-reddog-aks-12187
+export AKSNAME=briar-reddog-aks-10869
 az aks get-credentials -g $AKSNAME -n $AKSNAME
 
 kubectl get service/reddog-branch-ui -n reddog -o jsonpath='{.status.loadBalancer.ingress.ip}'
