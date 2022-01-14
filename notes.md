@@ -65,6 +65,62 @@ kubectl create secret generic reddog.secretstore \
     --from-literal=spnClientId='3abc5ac9-afd4-4115-a9a5-44c6603217fa' \
     --from-literal=spnTenantId='72f988bf-86f1-41af-91ab-2d7cd011db47'
 
-
-
 ```
+
+#### Traefik
+
+https://github.com/traefik/traefik-helm-chart
+
+helm repo add traefik https://helm.traefik.io/traefik
+helm repo update
+
+kubectl create ns traefik
+
+helm install traefik traefik/traefik --namespace traefik --set pilot.enabled=true
+
+helm install traefik traefik/traefik --namespace traefik --set deployment.annotations[0].service.beta.kubernetes.io/azure-dns-label-name=reddog
+
+helm install traefik traefik/traefik --namespace traefik --set deployment.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog
+
+helm install traefik traefik/traefik --namespace traefik --set deployment.podAnnotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog
+
+helm install ingress-nginx ingress-nginx/ingress-nginx -n dapr-workshop --set controller.service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=$UNIQUE_SUFFIX 
+
+helm uninstall traefik -n traefik
+
+
+helm install stable/nginx-ingress --set controller.service.annotations."cloud\.google\.com\/load-balancer\-type"=Internal
+
+
+
+kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik
+
+kubectl port-forward -n traefik $(kubectl get pods -n traefik --selector "app.kubernetes.io/name=traefik" --output=name) 9000:9000
+
+http://localhost:9000/dashboard/#/
+
+http://brianredmond.io/dashboard/#/
+
+http://reddog-ui.brianredmond.io
+
+
+
+
+#### DNS
+
+
+Name:                     traefik
+Namespace:                traefik
+Labels:                   app.kubernetes.io/instance=traefik
+                          app.kubernetes.io/managed-by=Helm
+                          app.kubernetes.io/name=traefik
+                          helm.sh/chart=traefik-10.9.1
+Annotations:              meta.helm.sh/release-name: traefik
+                          meta.helm.sh/release-namespace: traefik
+                          service.beta.kubernetes.io/azure-dns-label-name: reddog
+
+https://github.com/Azure/AKS/issues/611
+
+https://docs.microsoft.com/en-us/azure/aks/static-ip#apply-a-dns-label-to-the-service
+
+                         

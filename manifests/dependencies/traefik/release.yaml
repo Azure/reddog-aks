@@ -1,0 +1,22 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: traefik
+spec:
+  releaseName: traefik
+  chart:
+    spec:
+      chart: traefik
+      sourceRef:
+        kind: HelmRepository
+        name: traefik
+        namespace: flux-system
+      version: 1.3.0
+  interval: 1h0m0s
+  values:
+    deployment:
+      podAnnotations:
+        service.beta.kubernetes.io/azure-dns-label-name: reddog
+  install:
+    remediation:
+      retries: 3
