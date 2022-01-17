@@ -1,6 +1,9 @@
 ## Notes
 
 ```bash
+# testing
+export AKSNAME=briar-reddog-aks-8175
+az aks get-credentials -g $AKSNAME -n $AKSNAME
 
 # service principal cleanup
 az ad sp list --show-mine -o table
@@ -8,12 +11,6 @@ az ad sp list --show-mine -o table
 az ad sp list --show-mine -o json --query "[?contains(displayName, 'azure-cli')]"
 
 az ad sp list --show-mine -o json --query "[?contains(displayName, 'reddog')]" | jq -r '.[] | .appId' | xargs -P 4 -n 12 -I % az ad sp delete --id %
-
-# testing
-export AKSNAME=briar-reddog-aks-8591
-az aks get-credentials -g $AKSNAME -n $AKSNAME
-
-kubectl get service/reddog-branch-ui -n reddog -o jsonpath='{.status.loadBalancer.ingress.ip}'
 
 # flux v2
 az k8s-configuration flux create \

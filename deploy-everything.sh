@@ -245,6 +245,17 @@ echo '****************************************************'
     # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
     # echo "KeyVault secret created: cosmos-primary-rw-key"    
 
+# Azure SQL server must set firewall to allow azure services
+export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
+echo ''
+echo 'Allow Azure Services to access Azure SQL (Firewall)'
+az sql server firewall-rule create \
+    --resource-group $RG_NAME \
+    --server $AZURE_SQL_SERVER \
+    --name AllowAzureServices \
+    --start-ip-address 0.0.0.0 \
+    --end-ip-address 0.0.0.0
+
 # Configure AKS Flux v2 GitOps - dependencies and apps
 echo ''
 echo '****************************************************'
@@ -277,16 +288,7 @@ az k8s-configuration flux create \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
 
-# Azure SQL server must set firewall to allow azure services
-export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
-echo ''
-echo 'Allow Azure Services to access Azure SQL (Firewall)'
-az sql server firewall-rule create \
-    --resource-group $RG_NAME \
-    --server $AZURE_SQL_SERVER \
-    --name AllowAzureServices \
-    --start-ip-address 0.0.0.0 \
-    --end-ip-address 0.0.0.0
+sleep 60
 
 # get URL's for application
 export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
