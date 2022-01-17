@@ -5,7 +5,7 @@ metadata:
   namespace: reddog
 spec:
   rules:
-  - host: reddog-ui.brianredmond.io
+  - host: reddog.eastus.cloudapp.azure.com
     http:
       paths:
       - path: /

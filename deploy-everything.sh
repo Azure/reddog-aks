@@ -89,7 +89,7 @@ az deployment group show -g $RG_NAME -n aks-reddog -o json --query properties.ou
 # Connect to AKS and create namespace, redis
 echo ''
 echo '****************************************************'
-echo 'Connect to AKS and create namespace, secrets'
+echo 'AKS. Create namespace, secrets, Helm charts'
 echo '****************************************************'
 AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
 echo 'AKS Cluster Name: ' $AKS_NAME
@@ -245,17 +245,6 @@ echo '****************************************************'
     # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
     # echo "KeyVault secret created: cosmos-primary-rw-key"    
 
-# Azure SQL server must set firewall to allow azure services
-export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
-echo ''
-echo 'Allow Azure Services to access Azure SQL (Firewall)'
-az sql server firewall-rule create \
-    --resource-group $RG_NAME \
-    --server $AZURE_SQL_SERVER \
-    --name AllowAzureServices \
-    --start-ip-address 0.0.0.0 \
-    --end-ip-address 0.0.0.0
-
 # Configure AKS Flux v2 GitOps - dependencies and apps
 echo ''
 echo '****************************************************'
@@ -278,9 +267,6 @@ export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 #     --branch main \
 #     --kustomization name=dependencies path=./manifests/dependencies prune=true  
 
-echo ''
-echo 'GitOps Red Dog apps deployment'
-
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
     --cluster-name $AKS_NAME \
@@ -290,6 +276,33 @@ az k8s-configuration flux create \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
+
+# Azure SQL server must set firewall to allow azure services
+export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
+echo ''
+echo 'Allow Azure Services to access Azure SQL (Firewall)'
+az sql server firewall-rule create \
+    --resource-group $RG_NAME \
+    --server $AZURE_SQL_SERVER \
+    --name AllowAzureServices \
+    --start-ip-address 0.0.0.0 \
+    --end-ip-address 0.0.0.0
+
+# get URL's for application
+export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
+export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8082"
+export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
+
+echo ''
+echo '****************************************************'
+echo 'Application URLs'
+echo ''
+echo 'UI: ' $UI_URL
+echo 'Order service: ' $ORDER_URL
+echo 'Makeline service: ' $MAKE_LINE_URL
+echo 'Accounting service: ' $ACCOUNTING_URL
+echo '****************************************************'
 
 # elapsed time with second resolution
 echo ''

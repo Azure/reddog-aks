@@ -10,7 +10,7 @@ az ad sp list --show-mine -o json --query "[?contains(displayName, 'azure-cli')]
 az ad sp list --show-mine -o json --query "[?contains(displayName, 'reddog')]" | jq -r '.[] | .appId' | xargs -P 4 -n 12 -I % az ad sp delete --id %
 
 # testing
-export AKSNAME=briar-reddog-aks-10869
+export AKSNAME=briar-reddog-aks-8591
 az aks get-credentials -g $AKSNAME -n $AKSNAME
 
 kubectl get service/reddog-branch-ui -n reddog -o jsonpath='{.status.loadBalancer.ingress.ip}'
@@ -108,6 +108,7 @@ http://reddog-ui.brianredmond.io
 
 #### DNS
 
+reddog.eastus.cloudapp.azure.com
 
 Name:                     traefik
 Namespace:                traefik
@@ -123,4 +124,16 @@ https://github.com/Azure/AKS/issues/611
 
 https://docs.microsoft.com/en-us/azure/aks/static-ip#apply-a-dns-label-to-the-service
 
-                         
+export FLIGHTS_IP=$(kubectl get svc --namespace tracker flights-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}') && echo $FLIGHTS_IP  
+
+export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
+export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8082"
+export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
+
+echo 'UI: ' $UI_URL
+echo 'Order service: ' $ORDER_URL
+echo 'Makeline service: ' $MAKE_LINE_URL
+echo 'Accounting service: ' $ACCOUNTING_URL
+
+
