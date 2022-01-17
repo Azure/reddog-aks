@@ -117,7 +117,7 @@ echo ''
 echo 'Deploying Traefik Helm chart' # 
 helm install traefik traefik/traefik \
     --namespace traefik \
-    --set deployment.podAnnotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog
+    --set service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog$SUFFIX
 
 echo 'Deploying Redis Helm chart' # https://bitnami.com/stack/redis/helm
 export REDIS_PASSWD='w@lkingth3d0g'

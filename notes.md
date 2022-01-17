@@ -107,6 +107,8 @@ http://reddog-ui.brianredmond.io
 
 reddog.eastus.cloudapp.azure.com
 
+http://briarreddog.eastus.cloudapp.azure.com/#/dashboard
+
 Name:                     traefik
 Namespace:                traefik
 Labels:                   app.kubernetes.io/instance=traefik
