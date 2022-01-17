@@ -72,7 +72,7 @@ kubectl create secret generic reddog.secretstore \
 https://github.com/traefik/traefik-helm-chart
 
 helm repo add traefik https://helm.traefik.io/traefik
-helm repo update
+helm repo update 
 
 kubectl create ns traefik
 

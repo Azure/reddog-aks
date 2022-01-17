@@ -95,19 +95,45 @@ AKS_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .aksName.value)
 echo 'AKS Cluster Name: ' $AKS_NAME
 az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
 
+echo ''
 echo 'Create namespaces'
 kubectl create ns reddog
 kubectl create ns redis
+kubectl create ns dapr-system
+kubectl create ns traefik
+
+echo ''
+echo 'Helm repo updates'
+helm repo add dapr https://dapr.github.io/helm-charts
+helm repo add azure-marketplace https://marketplace.azurecr.io/helm/v1/repo
+helm repo add traefik https://helm.traefik.io/traefik
+helm repo update
+
+echo ''
+echo 'Deploying Dapr Helm chart'
+helm install dapr dapr/dapr --namespace dapr-system
+
+echo ''
+echo 'Deploying Traefik Helm chart' # 
+helm install traefik traefik/traefik \
+    --namespace traefik \
+    --set deployment.podAnnotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog
 
 echo 'Deploying Redis Helm chart' # https://bitnami.com/stack/redis/helm
 export REDIS_PASSWD='w@lkingth3d0g'
-helm repo add azure-marketplace https://marketplace.azurecr.io/helm/v1/repo
 helm install redis-release azure-marketplace/redis \
     --namespace redis \
     --set auth.password=$REDIS_PASSWD \
     --set replica.replicaCount=2
 
-kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog    
+kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog 
+
+# Zipkin
+echo ''
+echo 'Installing Zipkin for Dapr'
+kubectl create ns zipkin
+kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
+kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
 # Initialize KV  
 echo 'Create SP for KV and setup permissions'
@@ -219,30 +245,6 @@ echo '****************************************************'
     # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
     # echo "KeyVault secret created: cosmos-primary-rw-key"    
 
-# Configure AKS Flux v2 GitOps - dependencies and apps
-echo ''
-echo '****************************************************'
-echo 'Configure AKS Flux v2 GitOps - dependencies and apps'
-echo '****************************************************'
-export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
-
-# Arc not needed with AKS GitOps extension. https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-flux2
-# az connectedk8s connect -g $RG_NAME -n$AKS_NAME --distribution aks
-# echo "AKS cluster Arc enabled"
-
-echo ''
-echo 'GitOps Red Dog dependencies deployment'
-
-az k8s-configuration flux create \
-    --resource-group $RG_NAME \
-    --cluster-name $AKS_NAME \
-    --cluster-type managedClusters \
-    --scope cluster \
-    --name $AKS_NAME-dep --namespace flux-system \
-    --url https://github.com/Azure/reddog-aks.git \
-    --branch main \
-    --kustomization name=dependencies path=./manifests/dependencies prune=true  
-
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
 echo ''
@@ -254,17 +256,27 @@ az sql server firewall-rule create \
     --start-ip-address 0.0.0.0 \
     --end-ip-address 0.0.0.0
 
-# Zipkin
+# Configure AKS Flux v2 GitOps - dependencies and apps
 echo ''
-echo 'Installing Zipkin for Dapr'
-kubectl create ns zipkin
-kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
-kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
+echo '****************************************************'
+echo 'Configure AKS Flux v2 GitOps to deploy app'
+echo '****************************************************'
+export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 
-# Wait for dapr to start
-echo ''
-echo 'waiting 60 seconds for Dapr to fully start'
-sleep 60
+# Arc not needed with AKS GitOps extension. https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-flux2
+
+# echo ''
+# echo 'GitOps Red Dog dependencies deployment'
+
+# az k8s-configuration flux create \
+#     --resource-group $RG_NAME \
+#     --cluster-name $AKS_NAME \
+#     --cluster-type managedClusters \
+#     --scope cluster \
+#     --name $AKS_NAME-dep --namespace flux-system \
+#     --url https://github.com/Azure/reddog-aks.git \
+#     --branch main \
+#     --kustomization name=dependencies path=./manifests/dependencies prune=true  
 
 echo ''
 echo 'GitOps Red Dog apps deployment'
@@ -280,6 +292,7 @@ az k8s-configuration flux create \
     --kustomization name=services path=./manifests/base prune=true  
 
 # elapsed time with second resolution
+echo ''
 end_time=$(date +%s)
 elapsed=$(( end_time - start_time ))
 eval "echo Script elapsed time: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hours %M minutes %S seconds')"
