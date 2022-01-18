@@ -12,3 +12,4 @@ resources:
 - ui.yaml
 - virtual-customers.yaml
 - virtual-worker.yaml
+- reddog-ingress.yaml

@@ -297,14 +297,15 @@ export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-ser
 export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
 
 echo ''
-echo '****************************************************'
+echo '*********************************************************************'
 echo 'Application URLs'
 echo ''
 echo 'UI: ' $UI_URL
+echo 'UI ingress path: ' 'http://reddog'$SUFFIX'.eastus.cloudapp.azure.com'
 echo 'Order service: ' $ORDER_URL
 echo 'Makeline service: ' $MAKE_LINE_URL
 echo 'Accounting service: ' $ACCOUNTING_URL
-echo '****************************************************'
+echo '*********************************************************************'
 
 # elapsed time with second resolution
 echo ''

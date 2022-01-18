@@ -2,7 +2,7 @@
 
 ```bash
 # testing
-export AKSNAME=briar-reddog-aks-8175
+export AKSNAME=briar-reddog-aks-28868
 az aks get-credentials -g $AKSNAME -n $AKSNAME
 
 # service principal cleanup
@@ -47,6 +47,26 @@ az k8s-configuration flux delete --name $AKSNAME-apps \
     --yes \
     --cluster-type connectedClusters
 
+az k8s-configuration flux list --resource-group briar-reddog-aks-28868 \
+    --cluster-name briar-reddog-aks-28868 \
+    --cluster-type managedClusters
+
+az k8s-configuration flux show --resource-group briar-reddog-aks-28868 \
+    --name briar-reddog-aks-28868-apps \
+    --cluster-name briar-reddog-aks-28868 \
+    --cluster-type managedClusters
+
+az k8s-configuration flux kustomization list --resource-group briar-reddog-aks-28868 \
+    --name briar-reddog-aks-28868-apps \
+    --cluster-name briar-reddog-aks-28868 \
+    --cluster-type managedClusters
+
+az k8s-configuration flux kustomization show --resource-group briar-reddog-aks-28868 \
+    --name briar-reddog-aks-28868-apps \
+    --kustomization-name services \
+    --cluster-name briar-reddog-aks-28868 \
+    --cluster-type managedClusters -o json
+
 # Create K8s secret for above pfx (used by Dapr)
 kubectl create secret generic reddog.secretstore \
     --namespace reddog \
@@ -59,8 +79,8 @@ kubectl create secret generic reddog.secretstore \
     --namespace reddog \
     --from-file=secretstore-cert=./kv-briar-reddog-aks-6015-cert.pfx \
     --from-literal=vaultName='briar-reddog-kv-no3e' \
-    --from-literal=spnClientId='3abc5ac9-afd4-4115-a9a5-44c6603217fa' \
-    --from-literal=spnTenantId='72f988bf-86f1-41af-91ab-2d7cd011db47'
+    --from-literal=spnClientId='' \
+    --from-literal=spnTenantId=''
 
 ```
 
@@ -85,10 +105,7 @@ helm install ingress-nginx ingress-nginx/ingress-nginx -n dapr-workshop --set co
 
 helm uninstall traefik -n traefik
 
-
 helm install stable/nginx-ingress --set controller.service.annotations."cloud\.google\.com\/load-balancer\-type"=Internal
-
-
 
 kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik
 
@@ -105,9 +122,7 @@ http://reddog-ui.brianredmond.io
 
 #### DNS
 
-reddog.eastus.cloudapp.azure.com
-
-http://briarreddog.eastus.cloudapp.azure.com/#/dashboard
+http://reddog12345.eastus.cloudapp.azure.com
 
 Name:                     traefik
 Namespace:                traefik
@@ -120,10 +135,7 @@ Annotations:              meta.helm.sh/release-name: traefik
                           service.beta.kubernetes.io/azure-dns-label-name: reddog
 
 https://github.com/Azure/AKS/issues/611
-
 https://docs.microsoft.com/en-us/azure/aks/static-ip#apply-a-dns-label-to-the-service
-
-export FLIGHTS_IP=$(kubectl get svc --namespace tracker flights-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}') && echo $FLIGHTS_IP  
 
 export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
