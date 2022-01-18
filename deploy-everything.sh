@@ -302,9 +302,13 @@ echo 'Application URLs'
 echo ''
 echo 'UI: ' $UI_URL
 echo 'UI ingress path: ' 'http://reddog'$SUFFIX'.eastus.cloudapp.azure.com'
-echo 'Order service: ' $ORDER_URL
-echo 'Makeline service: ' $MAKE_LINE_URL
-echo 'Accounting service: ' $ACCOUNTING_URL
+echo 'Order base URL: ' $ORDER_URL
+echo 'Makeline base URL: ' $MAKE_LINE_URL
+echo 'Accounting base URL: ' $ACCOUNTING_URL
+echo ''
+echo 'Order test path: ' $ORDER_URL'/product'
+echo 'Makeline test path: ' $MAKE_LINE_URL'/orders/denver'
+echo 'Accounting test path: ' $ACCOUNTING_URL'/OrderMetrics'
 echo '*********************************************************************'
 
 # elapsed time with second resolution
