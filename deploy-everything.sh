@@ -135,6 +135,16 @@ kubectl create ns zipkin
 kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
+# Prometheus / Grafana (use admin to login)
+echo ''
+echo 'Installing Prometheus / Grafana'
+git clone https://github.com/appdevgbb/kube-prometheus.git
+cd kube-prometheus/manifests
+kubectl apply --server-side -f ./setup
+kubectl apply -f ./
+cd ../..
+rm -rf kube-prometheus
+ 
 # Initialize KV  
 echo 'Create SP for KV and setup permissions'
 export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName.value)
@@ -288,7 +298,7 @@ az k8s-configuration flux create \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
 
-sleep 60
+# sleep 60
 
 # get URL's for application
 export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.status.loadBalancer.ingress[0].ip}')

@@ -5,6 +5,11 @@
 export AKSNAME=briar-reddog-aks-28868
 az aks get-credentials -g $AKSNAME -n $AKSNAME
 
+# hpa
+kubectl autoscale deployment order-service -n reddog --cpu-percent=10 --min=1 --max=10
+
+kubectl run -i --tty load-generator2 -n reddog --rm --image=busybox --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://order-service.reddog:8081/product; done"
+
 # service principal cleanup
 az ad sp list --show-mine -o table
 
