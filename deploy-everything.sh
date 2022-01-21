@@ -305,6 +305,8 @@ export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.st
 export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
 export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8082"
 export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
+export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
+export ZIPKIN_URL="http://"$(kubectl get svc --namespace zipkin zipkin -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":9411"
 
 echo ''
 echo '*********************************************************************'
@@ -315,6 +317,8 @@ echo 'UI ingress path: ' 'http://reddog'$SUFFIX'.eastus.cloudapp.azure.com'
 echo 'Order base URL: ' $ORDER_URL
 echo 'Makeline base URL: ' $MAKE_LINE_URL
 echo 'Accounting base URL: ' $ACCOUNTING_URL
+echo 'Grafana dashboard: ' $GRAFANA_URL
+echo 'Zipkin: ' $ZIPKIN_URL
 echo ''
 echo 'Order test path: ' $ORDER_URL'/product'
 echo 'Makeline test path: ' $MAKE_LINE_URL'/orders/denver'
