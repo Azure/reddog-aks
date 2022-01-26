@@ -146,6 +146,7 @@ cd ../..
 rm -rf kube-prometheus
  
 # Initialize KV  
+echo ''
 echo 'Create SP for KV and setup permissions'
 export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName.value)
 echo 'Key Vault: ' $KV_NAME
