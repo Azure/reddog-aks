@@ -14,7 +14,7 @@ spec:
     - name: database
       value: reddog
     - name: collection
-      value: loyalty
+      value: reddogstate
     - name: masterKey
       secretKeyRef:
         name: cosmos-primary-rw-key
