@@ -13,4 +13,4 @@ export SUFFIX=$RANDOM
 export RG_NAME=$PREFIX-aks-reddog-$SUFFIX
 export LOGFILE_NAME="./outputs/${RG_NAME}.log"
 
-./deploy-everything.sh $RG_NAME $LOCATION $SUFFIX 2>&1 | tee -a $LOGFILE_NAME
+./walk-the-dog.sh $RG_NAME $LOCATION $SUFFIX 2>&1 | tee -a $LOGFILE_NAME

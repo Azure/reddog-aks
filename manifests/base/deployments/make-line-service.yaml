@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: make-line-service
-          image: "ghcr.io/cloudnativegbb/paas-vnext/reddog-make-line-service:latest"
+          image: "ghcr.io/azure/reddog-retail-demo/reddog-retail-make-line-service:latest"
           ports:
             - containerPort: 80
           imagePullPolicy: Always

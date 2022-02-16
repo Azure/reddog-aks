@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: ui
-          image: "ghcr.io/cloudnativegbb/paas-vnext/reddog-ui:latest"
+          image: "ghcr.io/azure/reddog-retail-demo/reddog-retail-ui:latest"
           ports:
             - containerPort: 8080
           imagePullPolicy: Always

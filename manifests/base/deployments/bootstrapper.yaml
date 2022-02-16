@@ -18,6 +18,6 @@ spec:
     spec:
       containers:
       - name: bootstrapper
-        image: "ghcr.io/cloudnativegbb/paas-vnext/reddog-bootstrapper:latest"
+        image: "ghcr.io/azure/reddog-retail-demo/reddog-retail-bootstrapper:latest"
         imagePullPolicy: Always
       restartPolicy: OnFailure
