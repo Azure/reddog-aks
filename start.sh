@@ -1,3 +1,5 @@
+mkdir -p outputs
+
 # get params from config.json file
 export CONFIG="$(cat config.json | jq -r .)"
 
@@ -9,6 +11,6 @@ export PREFIX="$(echo $CONFIG | jq -r '.prefix')"
 # set initial variables
 export SUFFIX=$RANDOM
 export RG_NAME=$PREFIX-aks-reddog-$SUFFIX
-export LOGFILE_NAME="./logs/${RG_NAME}.log"
+export LOGFILE_NAME="./outputs/${RG_NAME}.log"
 
 ./deploy-everything.sh $RG_NAME $LOCATION $SUFFIX 2>&1 | tee -a $LOGFILE_NAME

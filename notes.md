@@ -1,6 +1,18 @@
 ## Notes
 
 ```bash
+# swagger
+http://52.224.29.62:8081/swagger/v1/swagger.json
+http://52.224.29.62:8081/swagger/index.html
+
+https://order-service.kindpebble-5d9795f7.eastus.azurecontainerapps.io/swagger/v1/swagger.json
+https://order-service.kindpebble-5d9795f7.eastus.azurecontainerapps.io/swagger/index.html
+
+http://52.224.196.55:8083/swagger/index.html
+http://52.224.196.55:8083/swagger/v1/swagger.json
+
+
+
 # testing
 export AKSNAME=briar-reddog-aks-28868
 az aks get-credentials -g $AKSNAME -n $AKSNAME
