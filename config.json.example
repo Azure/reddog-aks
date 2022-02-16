@@ -2,5 +2,5 @@
     "subscription_id": "",
     "tenant_id": "",
     "location":"eastus",
-    "prefix": "youralias"
+    "username": "youralias"
 }

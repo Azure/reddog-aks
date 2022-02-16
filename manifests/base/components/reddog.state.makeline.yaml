@@ -4,15 +4,21 @@ metadata:
   name: reddog.state.makeline
   namespace: reddog
 spec:
-  type: state.redis
+  type: state.azure.cosmosdb
   version: v1
   metadata:
-    - name: redisHost
-      value: redis-release-master.redis.svc.cluster.local:6379
-    - name: redisPassword
-      secretKeyRef:    
-        name: redis-password
-        key: redis-password
+    - name: url
+      secretKeyRef:
+        name: cosmos-uri
+        key: cosmos-uri
+    - name: database
+      value: reddog
+    - name: collection
+      value: makeline
+    - name: masterKey
+      secretKeyRef:
+        name: cosmos-primary-rw-key
+        key: cosmos-primary-rw-key
 scopes:
   - make-line-service
 auth:

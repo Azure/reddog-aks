@@ -24,9 +24,9 @@ param adminPublicKey string
 // Additional Params
 param serviceBusNamespaceName string = resourceGroup().name
 // param redisName string = resourceGroup().name
-// param cosmosAccountName string = resourceGroup().name
-// param cosmosDatabaseName string = 'reddog'
-// param cosmosCollectionName string = 'loyalty'
+param cosmosAccountName string = resourceGroup().name
+param cosmosDatabaseName string = 'reddog'
+param cosmosCollectionName string = 'loyalty'
 param storageAccountName string = replace(resourceGroup().name, '-', '')
 param blobContainerName string = 'receipts'
 param sqlServerName string = resourceGroup().name
@@ -104,15 +104,15 @@ module serviceBus 'modules/servicebus.bicep' = {
 //   }
 // }
 
-// module cosmos 'modules/cosmos.bicep' = {
-//   name: '${deployment().name}--cosmos'
-//   params: {
-//     cosmosAccountName: cosmosAccountName
-//     cosmosDatabaseName: cosmosDatabaseName
-//     cosmosCollectionName: cosmosCollectionName
-//     location: resourceGroup().location
-//   }
-// }
+module cosmos 'modules/cosmos.bicep' = {
+  name: '${deployment().name}--cosmos'
+  params: {
+    cosmosAccountName: cosmosAccountName
+    cosmosDatabaseName: cosmosDatabaseName
+    cosmosCollectionName: cosmosCollectionName
+    location: resourceGroup().location
+  }
+}
 
 module storage 'modules/storage.bicep' = {
   name: '${deployment().name}--storage'
@@ -140,8 +140,8 @@ output aksName string = aks.outputs.name
 output sqlServerName string = sqlServer.outputs.sqlServerName
 output sqlAdmin string = sqlServer.outputs.sqlAdmin
 output sqlPassword string = sqlServer.outputs.sqlPassword
-// output cosmosUri string = cosmos.outputs.cosmosUri
-// output cosmosAccountName string = cosmos.outputs.cosmosAccountName
+output cosmosUri string = cosmos.outputs.cosmosUri
+output cosmosAccountName string = cosmos.outputs.cosmosAccountName
 output serviceBusName string = serviceBus.outputs.sbName
 output serviceBusConnectString string = serviceBus.outputs.rootConnectionString
 output storageAccountName string = storage.outputs.storageAccountName

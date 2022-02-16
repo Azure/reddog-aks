@@ -2,6 +2,10 @@ mkdir -p outputs
 export RG_NAME=$1
 export LOCATION=$2
 export SUFFIX=$3
+export USERNAME=$4
+
+# set additional params
+export UNIQUE_SERVICE_NAME=reddog$RANDOM$USERNAME$SUFFIX
 
 start_time=$(date +%s)
 
@@ -14,6 +18,7 @@ echo 'SUBSCRIPTION: ' $SUBSCRIPTION_ID
 echo 'TENANT: ' $TENANT_ID
 echo 'LOCATION: ' $LOCATION
 echo 'RG_NAME: ' $RG_NAME
+echo 'UNIQUE NAME: ' $UNIQUE_SERVICE_NAME
 echo 'LOGFILE_NAME: ' $LOGFILE_NAME
 echo '****************************************************'
 echo ''
@@ -73,7 +78,7 @@ az deployment group create \
     --only-show-errors \
     --resource-group $RG_NAME \
     --template-file ./deploy/bicep/main.bicep \
-    --parameters prefix=$PREFIX \
+    --parameters prefix=$USERNAME \
     --parameters adminUsername="azureuser" \
     --parameters adminPublicKey="$SSH_PUB_KEY" \
     --parameters currentUserId="$CURRENT_USER_ID"
@@ -243,18 +248,21 @@ echo '****************************************************'
 
     # az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
     # echo "KeyVault secret created: redis-server"
-    az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWD
-    echo 'KeyVault secret created: redis-password'
+    # az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWD
+    # echo 'KeyVault secret created: redis-password'
 
     # cosmosdb
-    # export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
-    # echo "Cosmos URI: " $COSMOS_URI
-    # export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
-    # echo "Cosmos Account: " $COSMOS_ACCOUNT
-    # export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
+    export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Cosmos URI: " $COSMOS_URI
+    export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
+    echo "Cosmos Account: " $COSMOS_ACCOUNT
+    export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
     
-    # az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
-    # echo "KeyVault secret created: cosmos-primary-rw-key"    
+    az keyvault secret set --vault-name $KV_NAME --name cosmos-uri --value $COSMOS_URI
+    echo "KeyVault secret created: cosmos-uri"    
+
+    az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
+    echo "KeyVault secret created: cosmos-primary-rw-key"    
 
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
