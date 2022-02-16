@@ -103,7 +103,7 @@ az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
 echo ''
 echo 'Create namespaces'
 kubectl create ns reddog
-kubectl create ns redis
+#kubectl create ns redis
 kubectl create ns dapr-system
 kubectl create ns traefik
 
@@ -124,14 +124,14 @@ helm install traefik traefik/traefik \
     --namespace traefik \
     --set service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog$SUFFIX
 
-echo 'Deploying Redis Helm chart' # https://bitnami.com/stack/redis/helm
-export REDIS_PASSWD='w@lkingth3d0g'
-helm install redis-release azure-marketplace/redis \
-    --namespace redis \
-    --set auth.password=$REDIS_PASSWD \
-    --set replica.replicaCount=2
+# echo 'Deploying Redis Helm chart' # https://bitnami.com/stack/redis/helm
+# export REDIS_PASSWD='w@lkingth3d0g'
+# helm install redis-release azure-marketplace/redis \
+#     --namespace redis \
+#     --set auth.password=$REDIS_PASSWD \
+#     --set replica.replicaCount=2
 
-kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog 
+# kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog 
 
 # Zipkin
 echo ''
@@ -323,15 +323,17 @@ echo 'Application URLs'
 echo ''
 echo 'UI: ' $UI_URL
 echo 'UI ingress path: ' 'http://reddog'$SUFFIX'.eastus.cloudapp.azure.com'
-echo 'Order base URL: ' $ORDER_URL
-echo 'Makeline base URL: ' $MAKE_LINE_URL
-echo 'Accounting base URL: ' $ACCOUNTING_URL
 echo 'Grafana dashboard: ' $GRAFANA_URL
 echo 'Zipkin: ' $ZIPKIN_URL
 echo ''
 echo 'Order test path: ' $ORDER_URL'/product'
+echo 'Order test path (POST): ' $ORDER_URL'/order'
 echo 'Makeline test path: ' $MAKE_LINE_URL'/orders/denver'
-echo 'Accounting test path: ' $ACCOUNTING_URL'/OrderMetrics'
+echo 'Accounting test path: ' $ACCOUNTING_URL'/OrderMetrics?StoreId=denver'
+echo ''
+echo 'Order Swagger: ' $ORDER_URL'/swagger/v1/swagger.json'
+echo 'Makeline Swagger: ' $MAKE_LINE_URL'/swagger/v1/swagger.json'
+echo 'Accounting Swagger: ' $ACCOUNTING_URL'/swagger/v1/swagger.json'
 echo '*********************************************************************'
 
 # elapsed time with second resolution
