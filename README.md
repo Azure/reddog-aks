@@ -39,6 +39,8 @@ A member of the Azure SQL family, Azure SQL supports modern cloud applications o
 #### Azure Blob Storage 
 Azuree Blob storage is optimized for storing massive amounts of unstructured data. Unstructured data is data that doesn't adhere to a particular data model or definition, such as text or binary data. Blob storage is used by the Receipt Service via Dapr Output Bindings to store order receipts.
 
+#### Azure Cosmos DB
+Microsoft's NoSQL multi-model managed database as a service offering which is used as the Dapr State Store component implementation for the Loyalty Service
 
 ## Contributing
 
