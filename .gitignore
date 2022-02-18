@@ -362,3 +362,6 @@ outputs/
 
 config.json
 brian-notes.md
+
+load-testing/results.txt
+load-testing/output/
