@@ -9,20 +9,6 @@ export UNIQUE_SERVICE_NAME=reddog$RANDOM$USERNAME$SUFFIX
 
 start_time=$(date +%s)
 
-# show all params
-echo '****************************************************'
-echo 'Starting Red Dog on AKS deployment'
-echo ''
-echo 'Parameters:'
-echo 'SUBSCRIPTION: ' $SUBSCRIPTION_ID
-echo 'TENANT: ' $TENANT_ID
-echo 'LOCATION: ' $LOCATION
-echo 'RG_NAME: ' $RG_NAME
-echo 'UNIQUE NAME: ' $UNIQUE_SERVICE_NAME
-echo 'LOGFILE_NAME: ' $LOGFILE_NAME
-echo '****************************************************'
-echo ''
-
 # Check for Azure login
 echo 'Checking to ensure logged into Azure CLI'
 AZURE_LOGIN=0 
@@ -36,6 +22,25 @@ if [[ ${AZURE_LOGIN} -ne 0 ]]; then
     az login --use-device-code
     export AZURE_LOGIN
 fi
+
+# get current user
+export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
+
+# show all params
+echo '****************************************************'
+echo 'Starting Red Dog on AKS deployment'
+echo ''
+echo 'Parameters:'
+echo 'SUBSCRIPTION: ' $SUBSCRIPTION_ID
+echo 'TENANT: ' $TENANT_ID
+echo 'LOCATION: ' $LOCATION
+echo 'USER/PREFIX: ' $USERNAME
+echo 'RG_NAME: ' $RG_NAME
+echo 'UNIQUE NAME: ' $UNIQUE_SERVICE_NAME
+echo 'LOGFILE_NAME: ' $LOGFILE_NAME
+echo 'CURRENT USER: ' $CURRENT_USER_ID
+echo '****************************************************'
+echo ''
 
 # update az CLI to install extensions automatically
 az config set extension.use_dynamic_install=yes_without_prompt
@@ -61,11 +66,6 @@ ssh-keygen -f ~/.ssh/aks-reddog -N '' <<< y
 
 export SSH_PUB_KEY="$(cat ~/.ssh/aks-reddog.pub)"
 
-# get current user
-export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
-echo 'RG Name: ' $RG_NAME
-echo 'Current user: ' $CURRENT_USER_ID
-
 # Bicep deployment
 echo ''
 echo '****************************************************'
@@ -78,7 +78,7 @@ az deployment group create \
     --only-show-errors \
     --resource-group $RG_NAME \
     --template-file ./deploy/bicep/main.bicep \
-    --parameters prefix=$USERNAME \
+    --parameters uniqueServiceName=$UNIQUE_SERVICE_NAME \
     --parameters adminUsername="azureuser" \
     --parameters adminPublicKey="$SSH_PUB_KEY" \
     --parameters currentUserId="$CURRENT_USER_ID"
@@ -340,4 +340,4 @@ echo '*********************************************************************'
 echo ''
 end_time=$(date +%s)
 elapsed=$(( end_time - start_time ))
-eval "echo Script elapsed time: $(date -ud "@$elapsed" +'$((%s/3600/24)) days %H hours %M minutes %S seconds')"
+printf 'Script elapsed time: %dh:%dm:%ds\n' $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))

@@ -1,27 +1,5 @@
-// Naming convention requirements
-param prefix string
-
-// Network Settings
-param vnetPrefix string = '10.0.0.0/16'
-param aksSubnetInfo object = {
-  name: 'AksSubnet'
-  properties: { 
-    addressPrefix: '10.0.4.0/22'
-    privateEndpointNetworkPolicies: 'Disabled'
-  }
-}
-param jumpboxSubnetInfo object = {
-  name: 'JumpboxSubnet'
-  properties: {
-    addressPrefix: '10.0.255.240/28'
-  }
-}
-
-// Linux Config
-param adminUsername string = 'azureuser'
-param adminPublicKey string
-
-// Additional Params
+// Params
+param uniqueServiceName string
 param serviceBusNamespaceName string = resourceGroup().name
 // param redisName string = resourceGroup().name
 param cosmosAccountName string = resourceGroup().name
@@ -34,33 +12,17 @@ param sqlDatabaseName string = 'reddog'
 param sqlAdminLogin string = 'reddog'
 param sqlAdminLoginPassword string = 'w@lkingth3d0g'
 param currentUserId string
-
-var name = '${prefix}-reddog'
+param adminUsername string = 'azureuser'
+param adminPublicKey string
 
 //
 // Top Level Resources
 //
 
-resource vnet 'Microsoft.Network/virtualNetworks@2020-08-01' = {
-  name: '${prefix}-hub-vnet'
-  location: resourceGroup().location
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        vnetPrefix
-      ]
-    }
-    subnets: [
-      aksSubnetInfo
-      jumpboxSubnetInfo
-    ]
-  } 
-}
-
 module keyvault 'modules/keyvault.bicep' = {
   name: 'keyvault'
   params: {
-    prefix: name
+    kvName: uniqueServiceName
     accessPolicies: [
       {
         objectId: currentUserId
@@ -80,10 +42,9 @@ module aks 'modules/aks.bicep' = {
   name: 'aks-deployment'
   params: {
     name: resourceGroup().name
-    //name: format('{0}-aks',name)
     adminUsername: adminUsername
     adminPublicKey: adminPublicKey
-    subnetId: '${vnet.id}/subnets/${aksSubnetInfo.name}'
+    //subnetId: '${vnet.id}/subnets/${aksSubnetInfo.name}'
   }
   
 }
