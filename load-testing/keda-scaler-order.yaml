@@ -1,0 +1,18 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: order-service-scaling
+  namespace: reddog
+spec:
+  scaleTargetRef:
+    name: order-service
+  pollingInterval:  30
+  cooldownPeriod:   150
+  idleReplicaCount: 0
+  minReplicaCount:  1
+  maxReplicaCount:  100
+  triggers:
+  - type: cpu
+    metadata:
+      type: Utilization
+      value: "10"

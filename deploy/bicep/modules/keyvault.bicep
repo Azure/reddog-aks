@@ -1,10 +1,8 @@
-param prefix string
 param accessPolicies array = []
-var uniqueId  = take(uniqueString(resourceGroup().id), 4) 
-var keyvaultname = '${prefix}-kv-${uniqueId}'
+param kvName string
 
 resource keyvault 'Microsoft.KeyVault/vaults@2020-04-01-preview' = {
-  name: keyvaultname
+  name: kvName
   location: resourceGroup().location
   properties: {
     tenantId: subscription().tenantId

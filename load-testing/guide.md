@@ -48,7 +48,19 @@ kubectl run -i --tty load-generator -n reddog --rm --image=busybox --restart=Nev
 # hpa
 kubectl autoscale deployment order-service -n reddog --cpu-percent=10 --min=1 --max=10
 
+kubectl scale deployment order-service --replicas=1
+
 ```
 
 #### KEDA
 
+```bash
+helm repo add kedacore https://kedacore.github.io/charts
+helm repo update
+
+kubectl create namespace keda
+helm install keda kedacore/keda --namespace keda
+
+kubectl apply -f ./load-testing/keda-scaler-order.yaml
+
+```
