@@ -3,6 +3,8 @@ export RG_NAME=$1
 export LOCATION=$2
 export SUFFIX=$3
 export USERNAME=$4
+export MONITORING=$5
+export STATE_STORE=$6
 
 # set additional params
 export UNIQUE_SERVICE_NAME=reddog$RANDOM$USERNAME$SUFFIX
@@ -38,7 +40,8 @@ echo 'USER/PREFIX: ' $USERNAME
 echo 'RG_NAME: ' $RG_NAME
 echo 'UNIQUE NAME: ' $UNIQUE_SERVICE_NAME
 echo 'LOGFILE_NAME: ' $LOGFILE_NAME
-echo 'CURRENT USER: ' $CURRENT_USER_ID
+echo 'MONITORING: ' $MONITORING
+echo 'STATE_STORE: ' $STATE_STORE
 echo '****************************************************'
 echo ''
 
@@ -81,7 +84,9 @@ az deployment group create \
     --parameters uniqueServiceName=$UNIQUE_SERVICE_NAME \
     --parameters adminUsername="azureuser" \
     --parameters adminPublicKey="$SSH_PUB_KEY" \
-    --parameters currentUserId="$CURRENT_USER_ID"
+    --parameters currentUserId="$CURRENT_USER_ID" \
+    --parameters monitoringTool="$MONITORING" \
+    --parameters stateStore="$STATE_STORE"
 
 echo ''
 echo '****************************************************'
@@ -140,16 +145,25 @@ kubectl create ns zipkin
 kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
-# Prometheus / Grafana (use admin to login)
-# echo ''
-# echo 'Installing Prometheus / Grafana'
-# git clone https://github.com/appdevgbb/kube-prometheus.git
-# cd kube-prometheus/manifests
-# kubectl apply --server-side -f ./setup
-# kubectl apply -f ./
-# cd ../..
-# rm -rf kube-prometheus
- 
+if [ "$MONITORING" = "prometheus" ]
+then
+    echo ''
+    echo 'Installing Prometheus/Grafana as configured in config.json'
+    echo 'Note: use admin to login'
+    git clone https://github.com/appdevgbb/kube-prometheus.git
+    cd kube-prometheus/manifests
+    kubectl apply --server-side -f ./setup
+    kubectl apply -f ./
+    cd ../..
+    rm -rf kube-prometheus
+elif [ "$MONITORING" = "loganalytics" ]
+then
+    echo ''
+    echo 'Log Analytics used for monitoring as configured in config.json'
+else
+    echo 'No correct monitoring tool was set in config.json. Skipping'
+fi
+
 # Initialize KV  
 echo ''
 echo 'Create SP for KV and setup permissions'
@@ -205,9 +219,6 @@ kubectl create secret generic reddog.secretstore \
     --from-literal=vaultName=$KV_NAME \
     --from-literal=spnClientId=$SP_APPID \
     --from-literal=spnTenantId=$TENANT_ID
-
-# Log Analytics
-export LOG_ANALYTICS_ID=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .workspaceId.value)
 
 # Write keys to KV
 echo ''
@@ -308,14 +319,14 @@ az k8s-configuration flux create \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
 
-# sleep 60
+sleep 60
 
 # get URL's for application
 export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
 export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8082"
 export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
-# export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
+export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
 export ZIPKIN_URL="http://"$(kubectl get svc --namespace zipkin zipkin -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":9411"
 
 echo ''
@@ -324,8 +335,10 @@ echo 'Application URLs'
 echo ''
 echo 'UI: ' $UI_URL
 echo 'UI ingress path: ' 'http://reddog'$SUFFIX'.eastus.cloudapp.azure.com'
-# echo 'Grafana dashboard: ' $GRAFANA_URL
-echo 'Log Analytics Workspace ID: ' $LOG_ANALYTICS_ID
+if [ "$MONITORING" = "prometheus" ]
+then
+    echo 'Grafana dashboard (use admin): ' $GRAFANA_URL
+fi
 echo 'Zipkin: ' $ZIPKIN_URL
 echo ''
 echo 'Order test path: ' $ORDER_URL'/product'

@@ -12,6 +12,9 @@ This repo contains the scripts and configurations to deploy the Red Dog Demo alo
 * If you plan to make any code changes or contribute, we suggest you fork the repo first
 * Create an GitHub Codespace 
 * Create a `config.json` file based on the example in the repo and update values accordingly
+    * Azure Subscription and Tenant needed for Key Vault
+    * Use either `loganalytics` or `prometheus` for `monitoring`
+    * Use either `cosmos` or `redislocal` for `state_store`
 * Execute the `start.sh` deployment script.
 
 The `cleanup.sh` script will remove local log files and certs, but it does not delete the Resource Group. 

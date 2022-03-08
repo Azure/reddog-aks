@@ -4,6 +4,18 @@ param adminPublicKey string
 param nodeCount int = 5
 param vmSize string = 'Standard_D4_v3'
 param logAnalyticsID string
+param monitoringTool string
+
+var logAnalyticsEnabled = monitoringTool == 'loganalytics'
+
+var addonProfiles = {
+  omsagent: {
+    enabled: logAnalyticsEnabled
+    config: {
+      logAnalyticsWorkspaceResourceID: logAnalyticsID
+    }
+  }
+}
 
 resource aks 'Microsoft.ContainerService/managedClusters@2021-05-01' = {
   name: name
@@ -24,21 +36,12 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-05-01' = {
       }
     }    
     enableRBAC: true
-    addonProfiles: {
-      omsagent: {
-        enabled: true
-        config: {
-          logAnalyticsWorkspaceResourceID: logAnalyticsID
-        }
-      }
-    }
+    addonProfiles: monitoringTool == 'loganalytics' ? addonProfiles : json('null')
     agentPoolProfiles: [
       {
         name: 'agentpool1'
         count: nodeCount
         vmSize: vmSize
-        //osDiskSizeGB: 30
-        //osDiskType: 'Ephemeral'
         osType: 'Linux'
         mode: 'System'
       }

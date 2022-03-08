@@ -1,7 +1,7 @@
 // Params
 param uniqueServiceName string
 param serviceBusNamespaceName string = resourceGroup().name
-// param redisName string = resourceGroup().name
+param redisName string = resourceGroup().name
 param cosmosAccountName string = resourceGroup().name
 param cosmosDatabaseName string = 'reddog'
 param cosmosCollectionName string = 'reddogstate'
@@ -14,6 +14,8 @@ param sqlAdminLoginPassword string = 'w@lkingth3d0g'
 param currentUserId string
 param adminUsername string = 'azureuser'
 param adminPublicKey string
+param monitoringTool string = 'loganalytics'
+param stateStore string = 'cosmos'
 
 //
 // Top Level Resources
@@ -38,7 +40,7 @@ module keyvault 'modules/keyvault.bicep' = {
   }
 }
 
-module logAnalytics 'modules/loganalytics.bicep' = {
+module logAnalytics 'modules/loganalytics.bicep' = if (monitoringTool == 'loganalytics') {
   name: 'logAnalyticsWorkspace'
   params: {
     name: uniqueServiceName
@@ -51,7 +53,8 @@ module aks 'modules/aks.bicep' = {
     name: resourceGroup().name
     adminUsername: adminUsername
     adminPublicKey: adminPublicKey
-    logAnalyticsID: logAnalytics.outputs.workspaceId
+    monitoringTool: monitoringTool
+    logAnalyticsID: monitoringTool == 'loganalytics' ? logAnalytics.outputs.workspaceId : ''
   }
   
 }
@@ -114,7 +117,7 @@ output serviceBusName string = serviceBus.outputs.sbName
 output serviceBusConnectString string = serviceBus.outputs.rootConnectionString
 output storageAccountName string = storage.outputs.storageAccountName
 output storageAccountKey string = storage.outputs.accessKey
-output workspaceId string = logAnalytics.outputs.workspaceId
+// output workspaceId string = logAnalytics.outputs.workspaceId
 // output redisHost string = redis.outputs.redisHost
 // output redisSslPort int = redis.outputs.redisSslPort
 // output redisPassword string = redis.outputs.redisPassword
