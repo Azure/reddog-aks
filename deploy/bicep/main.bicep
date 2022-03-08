@@ -38,13 +38,20 @@ module keyvault 'modules/keyvault.bicep' = {
   }
 }
 
+module logAnalytics 'modules/loganalytics.bicep' = {
+  name: 'logAnalyticsWorkspace'
+  params: {
+    name: uniqueServiceName
+  }
+}
+
 module aks 'modules/aks.bicep' = {
   name: 'aks-deployment'
   params: {
     name: resourceGroup().name
     adminUsername: adminUsername
     adminPublicKey: adminPublicKey
-    //subnetId: '${vnet.id}/subnets/${aksSubnetInfo.name}'
+    logAnalyticsID: logAnalytics.outputs.workspaceId
   }
   
 }
@@ -107,6 +114,7 @@ output serviceBusName string = serviceBus.outputs.sbName
 output serviceBusConnectString string = serviceBus.outputs.rootConnectionString
 output storageAccountName string = storage.outputs.storageAccountName
 output storageAccountKey string = storage.outputs.accessKey
+output workspaceId string = logAnalytics.outputs.workspaceId
 // output redisHost string = redis.outputs.redisHost
 // output redisSslPort int = redis.outputs.redisSslPort
 // output redisPassword string = redis.outputs.redisPassword

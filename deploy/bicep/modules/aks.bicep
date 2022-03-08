@@ -3,6 +3,7 @@ param adminUsername string
 param adminPublicKey string
 param nodeCount int = 5
 param vmSize string = 'Standard_D4_v3'
+param logAnalyticsID string
 
 resource aks 'Microsoft.ContainerService/managedClusters@2021-05-01' = {
   name: name
@@ -23,6 +24,14 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-05-01' = {
       }
     }    
     enableRBAC: true
+    addonProfiles: {
+      omsagent: {
+        enabled: true
+        config: {
+          logAnalyticsWorkspaceResourceID: logAnalyticsID
+        }
+      }
+    }
     agentPoolProfiles: [
       {
         name: 'agentpool1'

@@ -141,14 +141,14 @@ kubectl create deployment zipkin -n zipkin --image openzipkin/zipkin
 kubectl expose deployment zipkin -n zipkin --type LoadBalancer --port 9411   
 
 # Prometheus / Grafana (use admin to login)
-echo ''
-echo 'Installing Prometheus / Grafana'
-git clone https://github.com/appdevgbb/kube-prometheus.git
-cd kube-prometheus/manifests
-kubectl apply --server-side -f ./setup
-kubectl apply -f ./
-cd ../..
-rm -rf kube-prometheus
+# echo ''
+# echo 'Installing Prometheus / Grafana'
+# git clone https://github.com/appdevgbb/kube-prometheus.git
+# cd kube-prometheus/manifests
+# kubectl apply --server-side -f ./setup
+# kubectl apply -f ./
+# cd ../..
+# rm -rf kube-prometheus
  
 # Initialize KV  
 echo ''
@@ -205,6 +205,9 @@ kubectl create secret generic reddog.secretstore \
     --from-literal=vaultName=$KV_NAME \
     --from-literal=spnClientId=$SP_APPID \
     --from-literal=spnTenantId=$TENANT_ID
+
+# Log Analytics
+export LOG_ANALYTICS_ID=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .workspaceId.value)
 
 # Write keys to KV
 echo ''
@@ -282,8 +285,6 @@ echo 'Configure AKS Flux v2 GitOps to deploy app'
 echo '****************************************************'
 export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 
-# Arc not needed with AKS GitOps extension. https://docs.microsoft.com/en-us/azure/azure-arc/kubernetes/tutorial-use-gitops-flux2
-
 # echo ''
 # echo 'GitOps Red Dog dependencies deployment'
 
@@ -314,7 +315,7 @@ export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.st
 export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
 export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8082"
 export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
-export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
+# export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
 export ZIPKIN_URL="http://"$(kubectl get svc --namespace zipkin zipkin -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":9411"
 
 echo ''
@@ -323,7 +324,8 @@ echo 'Application URLs'
 echo ''
 echo 'UI: ' $UI_URL
 echo 'UI ingress path: ' 'http://reddog'$SUFFIX'.eastus.cloudapp.azure.com'
-echo 'Grafana dashboard: ' $GRAFANA_URL
+# echo 'Grafana dashboard: ' $GRAFANA_URL
+echo 'Log Analytics Workspace ID: ' $LOG_ANALYTICS_ID
 echo 'Zipkin: ' $ZIPKIN_URL
 echo ''
 echo 'Order test path: ' $ORDER_URL'/product'
