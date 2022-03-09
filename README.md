@@ -15,6 +15,7 @@ This repo contains the scripts and configurations to deploy the Red Dog Demo alo
     * Azure Subscription and Tenant needed for Key Vault
     * Use either `loganalytics` or `prometheus` for `monitoring`
     * Use either `cosmos` or `redislocal` for `state_store`
+* Ensure `jq` https://stedolan.github.io/jq/download 
 * Execute the `start.sh` deployment script.
 
 The `cleanup.sh` script will remove local log files and certs, but it does not delete the Resource Group. 
