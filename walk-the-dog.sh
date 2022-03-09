@@ -326,8 +326,11 @@ export UI_URL="http://"$(kubectl get svc --namespace reddog ui -o jsonpath='{.st
 export ORDER_URL="http://"$(kubectl get svc --namespace reddog order-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8081"
 export MAKE_LINE_URL="http://"$(kubectl get svc --namespace reddog make-line-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8082"
 export ACCOUNTING_URL="http://"$(kubectl get svc --namespace reddog accounting-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":8083"
-export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
 export ZIPKIN_URL="http://"$(kubectl get svc --namespace zipkin zipkin -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":9411"
+if [ "$MONITORING" = "prometheus" ]
+then
+    export GRAFANA_URL="http://"$(kubectl get svc --namespace monitoring grafana -o jsonpath='{.status.loadBalancer.ingress[0].ip}')":3000"
+fi
 
 echo ''
 echo '*********************************************************************'
