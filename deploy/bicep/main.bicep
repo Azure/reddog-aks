@@ -12,8 +12,8 @@ param sqlDatabaseName string = 'reddog'
 param sqlAdminLogin string = 'reddog'
 param sqlAdminLoginPassword string = 'w@lkingth3d0g'
 param currentUserId string
-param adminUsername string = 'azureuser'
-param adminPublicKey string
+// param adminUsername string = 'azureuser'
+// param adminPublicKey string
 param monitoringTool string = 'loganalytics'
 param stateStore string = 'cosmos'
 
@@ -51,8 +51,8 @@ module aks 'modules/aks.bicep' = {
   name: 'aks-deployment'
   params: {
     name: resourceGroup().name
-    adminUsername: adminUsername
-    adminPublicKey: adminPublicKey
+    //adminUsername: adminUsername
+    //adminPublicKey: adminPublicKey
     monitoringTool: monitoringTool
     logAnalyticsID: monitoringTool == 'loganalytics' ? logAnalytics.outputs.workspaceId : ''
   }
@@ -75,7 +75,7 @@ module serviceBus 'modules/servicebus.bicep' = {
 //   }
 // }
 
-module cosmos 'modules/cosmos.bicep' = {
+module cosmos 'modules/cosmos.bicep' = if (stateStore == 'cosmos') {
   name: '${deployment().name}--cosmos'
   params: {
     cosmosAccountName: cosmosAccountName
@@ -111,13 +111,17 @@ output aksName string = aks.outputs.name
 output sqlServerName string = sqlServer.outputs.sqlServerName
 output sqlAdmin string = sqlServer.outputs.sqlAdmin
 output sqlPassword string = sqlServer.outputs.sqlPassword
-output cosmosUri string = cosmos.outputs.cosmosUri
-output cosmosAccountName string = cosmos.outputs.cosmosAccountName
+
+output cosmosUri string = stateStore == 'cosmos' ? cosmos.outputs.cosmosUri : ''
+output cosmosAccountName string = stateStore == 'cosmos' ? cosmos.outputs.cosmosAccountName : ''
+//output cosmosUri string = cosmos.outputs.cosmosUri
+//output cosmosAccountName string = cosmos.outputs.cosmosAccountName
+
 output serviceBusName string = serviceBus.outputs.sbName
 output serviceBusConnectString string = serviceBus.outputs.rootConnectionString
 output storageAccountName string = storage.outputs.storageAccountName
 output storageAccountKey string = storage.outputs.accessKey
-// output workspaceId string = logAnalytics.outputs.workspaceId
+
 // output redisHost string = redis.outputs.redisHost
 // output redisSslPort int = redis.outputs.redisSslPort
 // output redisPassword string = redis.outputs.redisPassword

@@ -64,10 +64,10 @@ echo "Creating Azure Resource Group"
 az group create --name $RG_NAME --location $LOCATION
 
 # create SSH keys
-echo 'Generating SSH keys (will overwrite existing)'
-ssh-keygen -f ~/.ssh/aks-reddog -N '' <<< y  
+# echo 'Generating SSH keys (will overwrite existing)'
+# ssh-keygen -f ~/.ssh/aks-reddog -N '' <<< y  
 
-export SSH_PUB_KEY="$(cat ~/.ssh/aks-reddog.pub)"
+# export SSH_PUB_KEY="$(cat ~/.ssh/aks-reddog.pub)"
 
 # Bicep deployment
 echo ''
@@ -82,11 +82,11 @@ az deployment group create \
     --resource-group $RG_NAME \
     --template-file ./deploy/bicep/main.bicep \
     --parameters uniqueServiceName=$UNIQUE_SERVICE_NAME \
-    --parameters adminUsername="azureuser" \
-    --parameters adminPublicKey="$SSH_PUB_KEY" \
     --parameters currentUserId="$CURRENT_USER_ID" \
     --parameters monitoringTool="$MONITORING" \
     --parameters stateStore="$STATE_STORE"
+    # --parameters adminUsername="azureuser" \
+    # --parameters adminPublicKey="$SSH_PUB_KEY" \
 
 echo ''
 echo '****************************************************'
@@ -108,7 +108,6 @@ az aks get-credentials -n $AKS_NAME -g $RG_NAME --overwrite-existing
 echo ''
 echo 'Create namespaces'
 kubectl create ns reddog
-#kubectl create ns redis
 kubectl create ns dapr-system
 kubectl create ns traefik
 
@@ -129,14 +128,22 @@ helm install traefik traefik/traefik \
     --namespace traefik \
     --set service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog$SUFFIX
 
-# echo 'Deploying Redis Helm chart' # https://bitnami.com/stack/redis/helm
-# export REDIS_PASSWD='w@lkingth3d0g'
-# helm install redis-release azure-marketplace/redis \
-#     --namespace redis \
-#     --set auth.password=$REDIS_PASSWD \
-#     --set replica.replicaCount=2
-
-# kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog 
+if [ "$STATE_STORE" = "redislocal" ]
+then
+    echo ''
+    echo 'Deploying Redis Helm chart in AKS as configured in config.json' # https://bitnami.com/stack/redis/helm
+    export REDIS_PASSWD='w@lkingth3d0g'
+    kubectl create ns redis
+    helm install redis-release azure-marketplace/redis --namespace redis --set auth.password=$REDIS_PASSWD --set replica.replicaCount=2
+    kubectl create secret generic redis-password --from-literal=redis-password=$REDIS_PASSWD -n reddog 
+elif [ "$STATE_STORE" = "cosmos" ]
+then
+    echo ''
+    echo 'CosmosDB deployed via Bicep as configured in config.json'
+else
+    echo 'ERROR: State store value in config.json is not valid. Exiting'
+    exit 0
+fi
 
 # Zipkin
 echo ''
@@ -254,29 +261,35 @@ echo '****************************************************'
     az keyvault secret set --vault-name $KV_NAME --name reddog-sql --value "${REDDOG_SQL_CONNECTION_STRING}"
     echo 'KeyVault secret created: reddog-sql'
 
-    # Redis
-    # export REDIS_HOST=$(jq -r .redisHost.value ./outputs/$RG_NAME-bicep-outputs.json)
-    # export REDIS_PORT=$(jq -r .redisSslPort.value ./outputs/$RG_NAME-bicep-outputs.json)
-    # export REDIS_FQDN="${REDIS_HOST}:${REDIS_PORT}"
-    # export REDIS_PASSWORD=$(jq -r .redisPassword.value ./outputs/$RG_NAME-bicep-outputs.json)
+    if [ "$STATE_STORE" = "redislocal" ]
+    then
+        echo ''
+        export REDIS_HOST='redis-release-master.redis.svc.cluster.local'
+        export REDIS_PORT='6379'
+        export REDIS_FQDN="${REDIS_HOST}:${REDIS_PORT}"
+        export REDIS_PASSWORD=$(kubectl get secret --namespace redis redis-release -o jsonpath="{.data.redis-password}" | base64 --decode)
 
-    # az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
-    # echo "KeyVault secret created: redis-server"
-    # az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWD
-    # echo 'KeyVault secret created: redis-password'
+        az keyvault secret set --vault-name $KV_NAME --name redis-server --value $REDIS_FQDN
+        echo "KeyVault secret created: redis-server"
+        az keyvault secret set --vault-name $KV_NAME --name redis-password --value $REDIS_PASSWD
+        echo 'KeyVault secret created: redis-password'        
+    elif [ "$STATE_STORE" = "cosmos" ]
+    then
+        echo ''
+        export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
+        echo "Cosmos URI: " $COSMOS_URI
+        export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
+        echo "Cosmos Account: " $COSMOS_ACCOUNT
+        export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
+        
+        az keyvault secret set --vault-name $KV_NAME --name cosmos-uri --value $COSMOS_URI
+        echo "KeyVault secret created: cosmos-uri"    
 
-    # cosmosdb
-    export COSMOS_URI=$(jq -r .cosmosUri.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Cosmos URI: " $COSMOS_URI
-    export COSMOS_ACCOUNT=$(jq -r .cosmosAccountName.value ./outputs/$RG_NAME-bicep-outputs.json)
-    echo "Cosmos Account: " $COSMOS_ACCOUNT
-    export COSMOS_PRIMARY_RW_KEY=$(az cosmosdb keys list -n $COSMOS_ACCOUNT  -g $RG_NAME -o json | jq -r '.primaryMasterKey')
-    
-    az keyvault secret set --vault-name $KV_NAME --name cosmos-uri --value $COSMOS_URI
-    echo "KeyVault secret created: cosmos-uri"    
-
-    az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
-    echo "KeyVault secret created: cosmos-primary-rw-key"    
+        az keyvault secret set --vault-name $KV_NAME --name cosmos-primary-rw-key --value $COSMOS_PRIMARY_RW_KEY
+        echo "KeyVault secret created: cosmos-primary-rw-key"          
+    else
+        echo 'ERROR: State store value in config.json is not valid'
+    fi    
 
 # Azure SQL server must set firewall to allow azure services
 export AZURE_SQL_SERVER=$(jq -r .sqlServerName.value ./outputs/$RG_NAME-bicep-outputs.json)
@@ -295,19 +308,6 @@ echo '****************************************************'
 echo 'Configure AKS Flux v2 GitOps to deploy app'
 echo '****************************************************'
 export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
-
-# echo ''
-# echo 'GitOps Red Dog dependencies deployment'
-
-# az k8s-configuration flux create \
-#     --resource-group $RG_NAME \
-#     --cluster-name $AKS_NAME \
-#     --cluster-type managedClusters \
-#     --scope cluster \
-#     --name $AKS_NAME-dep --namespace flux-system \
-#     --url https://github.com/Azure/reddog-aks.git \
-#     --branch main \
-#     --kustomization name=dependencies path=./manifests/dependencies prune=true  
 
 az k8s-configuration flux create \
     --resource-group $RG_NAME \

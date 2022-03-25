@@ -1,6 +1,6 @@
 param name string
-param adminUsername string
-param adminPublicKey string
+//param adminUsername string
+//param adminPublicKey string
 param nodeCount int = 5
 param vmSize string = 'Standard_D4_v3'
 param logAnalyticsID string
@@ -25,16 +25,16 @@ resource aks 'Microsoft.ContainerService/managedClusters@2021-05-01' = {
   }
   properties: {
     dnsPrefix: name
-    linuxProfile: {
-      adminUsername: adminUsername
-      ssh: {
-        publicKeys: [
-          {
-            keyData: adminPublicKey
-          }
-        ]
-      }
-    }    
+    // linuxProfile: {
+    //   adminUsername: adminUsername
+    //   ssh: {
+    //     publicKeys: [
+    //       {
+    //         keyData: adminPublicKey
+    //       }
+    //     ]
+    //   }
+    // }    
     enableRBAC: true
     addonProfiles: monitoringTool == 'loganalytics' ? addonProfiles : json('null')
     agentPoolProfiles: [

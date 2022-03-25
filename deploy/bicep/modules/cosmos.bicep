@@ -34,6 +34,9 @@ resource cosmosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
   parent: cosmosDatabase
   name: cosmosCollectionName
   properties: {
+    options: {
+      throughput: 4000
+    }
     resource: {
       id: cosmosCollectionName
       partitionKey: {
