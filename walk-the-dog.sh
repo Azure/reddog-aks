@@ -5,6 +5,7 @@ export SUFFIX=$3
 export USERNAME=$4
 export MONITORING=$5
 export STATE_STORE=$6
+export USE_VIRTUAL_CUSTOMER=$7
 
 # set additional params
 export UNIQUE_SERVICE_NAME=reddog$RANDOM$USERNAME$SUFFIX
@@ -42,6 +43,7 @@ echo 'UNIQUE NAME: ' $UNIQUE_SERVICE_NAME
 echo 'LOGFILE_NAME: ' $LOGFILE_NAME
 echo 'MONITORING: ' $MONITORING
 echo 'STATE_STORE: ' $STATE_STORE
+echo 'VIRTUAL CUSTOMER?: ' $USE_VIRTUAL_CUSTOMER
 echo '****************************************************'
 echo ''
 
@@ -302,22 +304,93 @@ az sql server firewall-rule create \
     --start-ip-address 0.0.0.0 \
     --end-ip-address 0.0.0.0
 
-# Configure AKS Flux v2 GitOps - dependencies and apps
+# Configure AKS Flux v2 GitOps deployments
 echo ''
 echo '****************************************************'
-echo 'Configure AKS Flux v2 GitOps to deploy app'
+echo 'Configure AKS Flux v2 GitOps deployments'
 echo '****************************************************'
 export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 
+# Deploy Flux config for base dapr components
+echo ''
+echo 'Deploy Flux config for base dapr components'
 az k8s-configuration flux create \
     --resource-group $RG_NAME \
     --cluster-name $AKS_NAME \
     --cluster-type managedClusters \
     --scope cluster \
-    --name $AKS_NAME-apps --namespace flux-system \
+    --name reddog-components-base \
+    --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
-    --kustomization name=services path=./manifests/base prune=true  
+    --kustomization name=kustomize path=./manifests/base/components-main prune=true 
+
+if [ "$STATE_STORE" = "redislocal" ]
+then
+    # Deploy Flux config Dapr components for Redis state store
+    echo ''
+    echo 'Deploy Flux config Dapr components for Redis state store'
+    az k8s-configuration flux create \
+        --resource-group $RG_NAME \
+        --cluster-name $AKS_NAME \
+        --cluster-type managedClusters \
+        --scope cluster \
+        --name reddog-components-redis \
+        --namespace flux-system \
+        --url https://github.com/Azure/reddog-aks.git \
+        --branch main \
+        --kustomization name=kustomize path=./manifests/base/components-redis prune=true 
+elif [ "$STATE_STORE" = "cosmos" ]
+then
+    # Deploy Flux config Dapr components for Cosmos state store
+    echo ''
+    echo 'Deploy Flux config Dapr components for Cosmos state store'
+    az k8s-configuration flux create \
+        --resource-group $RG_NAME \
+        --cluster-name $AKS_NAME \
+        --cluster-type managedClusters \
+        --scope cluster \
+        --name reddog-components-cosmos \
+        --namespace flux-system \
+        --url https://github.com/Azure/reddog-aks.git \
+        --branch main \
+        --kustomization name=kustomize path=./manifests/base/components-cosmos prune=true 
+else
+    echo 'ERROR: State store value in config.json is not valid'
+fi 
+
+# Deploy Flux config for reddog base services
+echo ''
+echo 'Deploy Flux config for reddog base services'
+az k8s-configuration flux create \
+    --resource-group $RG_NAME \
+    --cluster-name $AKS_NAME \
+    --cluster-type managedClusters \
+    --scope cluster \
+    --name reddog-deployments \
+    --namespace flux-system \
+    --url https://github.com/Azure/reddog-aks.git \
+    --branch main \
+    --kustomization name=kustomize path=./manifests/base/deployments prune=true 
+
+# Deploy Flux config for virtual customer (optional)
+if [ "$USE_VIRTUAL_CUSTOMER" = "true" ]
+then
+    echo ''
+    echo 'Deploy Flux config for virtual customer as specified in config.json'
+    az k8s-configuration flux create \
+        --resource-group $RG_NAME \
+        --cluster-name $AKS_NAME \
+        --cluster-type managedClusters \
+        --scope cluster \
+        --name reddog-virt-customer \
+        --namespace flux-system \
+        --url https://github.com/Azure/reddog-aks.git \
+        --branch main \
+        --kustomization name=kustomize path=./manifests/base/deployments-virt-customer prune=true 
+else
+    echo 'Virtual Customer was not deployed as specified in config.json'
+fi 
 
 sleep 60
 
