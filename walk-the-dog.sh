@@ -5,6 +5,7 @@ export SUFFIX=$3
 export USERNAME=$4
 export MONITORING=$5
 export STATE_STORE=$6
+export USE_VIRTUAL_CUSTOMER=$7
 
 # set additional params
 export UNIQUE_SERVICE_NAME=reddog$RANDOM$USERNAME$SUFFIX
@@ -42,6 +43,7 @@ echo 'UNIQUE NAME: ' $UNIQUE_SERVICE_NAME
 echo 'LOGFILE_NAME: ' $LOGFILE_NAME
 echo 'MONITORING: ' $MONITORING
 echo 'STATE_STORE: ' $STATE_STORE
+echo 'VIRTUAL CUSTOMER?: ' $USE_VIRTUAL_CUSTOMER
 echo '****************************************************'
 echo ''
 
@@ -302,10 +304,10 @@ az sql server firewall-rule create \
     --start-ip-address 0.0.0.0 \
     --end-ip-address 0.0.0.0
 
-# Configure AKS Flux v2 GitOps - dependencies and apps
+# Configure AKS Flux v2 GitOps deployments
 echo ''
 echo '****************************************************'
-echo 'Configure AKS Flux v2 GitOps to deploy app'
+echo 'Configure AKS Flux v2 GitOps deployments'
 echo '****************************************************'
 export AKS_NAME=$(jq -r .aksName.value ./outputs/$RG_NAME-bicep-outputs.json)
 
@@ -318,6 +320,17 @@ az k8s-configuration flux create \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
     --kustomization name=services path=./manifests/base prune=true  
+
+az k8s-configuration flux create \
+    --resource-group $RG_NAME \
+    --cluster-name $AKS_NAME \
+    --cluster-type managedClusters \
+    --scope cluster \
+    --name $AKS_NAME-apps --namespace flux-system \
+    --url https://github.com/Azure/reddog-aks.git \
+    --branch main \
+    --kustomization name=services path=./manifests/base prune=true 
+
 
 sleep 60
 

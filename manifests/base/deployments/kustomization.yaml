@@ -12,5 +12,4 @@ resources:
 - receipt-generation-service.yaml
 - services-external.yaml
 - ui.yaml
-- virtual-customers.yaml
 - virtual-worker.yaml

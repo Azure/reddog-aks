@@ -6,5 +6,3 @@ resources:
 - reddog.config.yaml
 - reddog.pubsub.yaml
 - reddog.secretstore.yaml
-- reddog.state.loyalty.yaml
-- reddog.state.makeline.yaml
