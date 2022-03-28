@@ -1,10 +1,12 @@
 {
     "subscription_id": "",
     "tenant_id": "",
-    "location":"eastus",
-    "username": "youralias",
+    "location":"westus",
+    "username": "abc",
     "_comment1": "for monitoring, use either loganalytics or prometheus only",
     "monitoring": "loganalytics",
-    "_comment2": "for state_store, use either cosmos or redis-local only",
-    "state_store": "cosmos"
+    "_comment2": "for state_store, use either cosmos or redislocal only",
+    "state_store": "redislocal",
+    "_comment3": "boolean (lower case). false will eliminate the virtual customer deployment",
+    "use_virtual_customer": "true"
 }
