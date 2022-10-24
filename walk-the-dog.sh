@@ -27,7 +27,8 @@ if [[ ${AZURE_LOGIN} -ne 0 ]]; then
 fi
 
 # get current user
-export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
+# export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .objectId)
+export CURRENT_USER_ID=$(az ad signed-in-user show -o json | jq -r .id)
 
 # show all params
 echo '****************************************************'
@@ -44,6 +45,7 @@ echo 'LOGFILE_NAME: ' $LOGFILE_NAME
 echo 'MONITORING: ' $MONITORING
 echo 'STATE_STORE: ' $STATE_STORE
 echo 'VIRTUAL CUSTOMER?: ' $USE_VIRTUAL_CUSTOMER
+echo 'CURRENT_USER_ID: ' $CURRENT_USER_ID
 echo '****************************************************'
 echo ''
 
@@ -178,6 +180,8 @@ echo ''
 echo 'Create SP for KV and setup permissions'
 export KV_NAME=$(cat ./outputs/$RG_NAME-bicep-outputs.json | jq -r .keyvaultName.value)
 echo 'Key Vault: ' $KV_NAME
+
+
 az ad sp create-for-rbac \
         --name "http://sp-$RG_NAME.microsoft.com" \
         --only-show-errors \
@@ -185,6 +189,14 @@ az ad sp create-for-rbac \
         --cert $RG_NAME-cert \
         --keyvault $KV_NAME \
         --years 1
+
+az ad sp create-for-rbac \
+        --name "http://sp-briantest.microsoft.com" \
+        --only-show-errors \
+        --create-cert \
+        --cert reddog-aks-4475-test-cert \
+        --keyvault reddog358briar4475 \
+        --years 1        
 
 ## Get SP APP ID
 echo 'Getting SP_APPID ...'
@@ -194,7 +206,8 @@ echo 'AKV SP_APPID: ' $SP_APPID
 
 ## Get SP Object ID
 echo 'Getting SP_OBJECTID ...'
-SP_OBJECTID=$(echo $SP_INFO | jq -r .[].objectId)
+# SP_OBJECTID=$(echo $SP_INFO | jq -r .[].objectId)
+SP_OBJECTID=$(echo $SP_INFO | jq -r .[].id)
 echo 'AKV SP_OBJECTID: ' $SP_OBJECTID
 
 # Assign SP to KV with GET permissions
