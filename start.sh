@@ -1,3 +1,4 @@
+#!/bin/bash
 mkdir -p outputs
 
 # get params from config.json file

@@ -1,3 +1,4 @@
+#!/bin/bash
 mkdir -p outputs
 export RG_NAME=$1
 export LOCATION=$2
