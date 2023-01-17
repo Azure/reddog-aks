@@ -1,3 +1,4 @@
+#!/bin/bash
 mkdir -p outputs
 export RG_NAME=$1
 export LOCATION=$2
@@ -120,6 +121,7 @@ echo 'Helm repo updates'
 helm repo add dapr https://dapr.github.io/helm-charts
 helm repo add azure-marketplace https://marketplace.azurecr.io/helm/v1/repo
 helm repo add traefik https://helm.traefik.io/traefik
+helm repo add crossplane https://charts.crossplane.io/master/
 helm repo update
 
 echo ''
@@ -131,6 +133,12 @@ echo 'Deploying Traefik Helm chart' #
 helm install traefik traefik/traefik \
     --namespace traefik \
     --set service.annotations."service\.beta\.kubernetes\.io/azure-dns-label-name"=reddog$SUFFIX
+
+echo ''
+echo 'Deploying Crossplane Helm chart' # https://crossplane.io/docs/v1.3/getting-started/install-configure.html
+helm install crossplane crossplane/crossplane \
+    --namespace crossplane \
+    --version 1.11.0-rc.0.99.g9850b98e
 
 if [ "$STATE_STORE" = "redislocal" ]
 then
@@ -336,7 +344,7 @@ az k8s-configuration flux create \
     --namespace flux-system \
     --url https://github.com/Azure/reddog-aks.git \
     --branch main \
-    --kustomization name=kustomize path=./manifests/base/components-main prune=true 
+    --kustomization name=kustomize path=./manifests/base/components-main prune=true --interval 10
 
 if [ "$STATE_STORE" = "redislocal" ]
 then

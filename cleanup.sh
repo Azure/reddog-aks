@@ -1,3 +1,4 @@
+#!/bin/bash
 rm ./outputs/*
 rm *.pfx
 

@@ -16,10 +16,11 @@ This repo contains the scripts and configurations to deploy the Red Dog Demo alo
     * Use either `loganalytics` or `prometheus` for `monitoring`
     * Use either `cosmos` or `redislocal` for `state_store`
     * Set `use_virtual_customer` to `true` or `false`
-* Ensure `jq` https://stedolan.github.io/jq/download 
+* Ensure [`jq`](https://stedolan.github.io/jq/download), [Helm](https://helm.sh/docs/intro/install/), and [Kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) are installed
 * Execute the `start.sh` deployment script.
 
-> Note: The `cleanup.sh` script will remove local log files and certs, but it does not delete the Resource Group. 
+> Note: When running on WSL, you may need to run `dos2unix *.sh` to ensure the scripts execute properly.
+> Note: The `cleanup.sh` script will remove local log files and certs, but it does not delete the Resource Group.
 
 ## Architecture
 
