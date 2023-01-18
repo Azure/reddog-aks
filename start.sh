@@ -1,3 +1,9 @@
+#!/usr/bin/env bash 
+set -eou pipefail 
+
+source utils.sh
+
+check_dependencies
 mkdir -p outputs
 
 # get params from config.json file

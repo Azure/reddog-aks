@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -eou pipefail
+
 mkdir -p outputs
 export RG_NAME=$1
 export LOCATION=$2
@@ -189,14 +193,7 @@ az ad sp create-for-rbac \
         --cert $RG_NAME-cert \
         --keyvault $KV_NAME \
         --years 1
-
-az ad sp create-for-rbac \
-        --name "http://sp-briantest.microsoft.com" \
-        --only-show-errors \
-        --create-cert \
-        --cert reddog-aks-4475-test-cert \
-        --keyvault reddog358briar4475 \
-        --years 1        
+  
 
 ## Get SP APP ID
 echo 'Getting SP_APPID ...'
